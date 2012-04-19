@@ -29,6 +29,10 @@ public class TestGamer extends StateMachineGamer {
 	@Override
 	public Move stateMachineSelectMove(long timeout) throws MoveDefinitionException {
 		List<Move> moves = getStateMachine().getLegalMoves(getCurrentState(), getRole());
+		System.out.println("======== legal moves =========");
+		for (Move move: moves) {
+			System.out.println(move);
+		}
 		return moves.get(0);
 	}
 	
@@ -40,8 +44,6 @@ public class TestGamer extends StateMachineGamer {
 	public void stateMachineMetaGame(long timeout) {
 		// Do nothing.
 	}
-
-
 
 	@Override
 	public void stateMachineStop() {
