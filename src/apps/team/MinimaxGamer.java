@@ -32,36 +32,39 @@ public class MinimaxGamer extends StateMachineGamer {
 		return new ProverStateMachine();
 	}
 	
-	/**
-	 * Selects the first legal move
-	 */
 	@Override
 	public Move stateMachineSelectMove(long timeout) throws MoveDefinitionException, TransitionDefinitionException {
 		try {
-			return minimaxMove(getCurrentState());
+			Move opt = minimaxMove(getCurrentState());
+			System.out.println(">> cache size: " + stateCache.size());
+			return opt;
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
+		// shouldn't happen, but just in case, return a random move
 		return getStateMachine().getRandomMove(getCurrentState(), getRole());
 	}
 	
 	private int minimaxValue(MachineState state) throws Exception {
-		// cache
+		// already computed
 		if (stateCache.containsKey(state)) {
 			return stateCache.get(state);
 		}
 		
+		// terminal state
 		if (getStateMachine().isTerminal(state)) {
 			int goal = getStateMachine().getGoal(state, getRole());
 			stateCache.put(state, goal);
 			return goal;
 		}
 		
+		// get moves and potential new states
 		Map<Move, List<MachineState>> moveStates = getStateMachine().getNextStates(state, getRole());
-		int max = -1;
 		
+		int max = -1;
 		for (Move move: moveStates.keySet()) {
+			// minimize
 			int min = -1;
 			for (MachineState nextState: moveStates.get(move)) {
 				int value = minimaxValue(nextState);
@@ -69,6 +72,8 @@ public class MinimaxGamer extends StateMachineGamer {
 					min = value;
 				}
 			}
+			
+			// maximize
 			if (max < 0 || min > max) {
 				max = min;
 			}
@@ -78,11 +83,19 @@ public class MinimaxGamer extends StateMachineGamer {
 		return max;
 	}
 	
+	/**
+	 * Wrapper to evaluate legal moves and compute opt via minimaxValue.
+	 * @param state
+	 * @return
+	 * @throws Exception
+	 */
 	private Move minimaxMove(MachineState state) throws Exception {
-		Map<Move, List<MachineState>> moveStates = getStateMachine().getNextStates(state, getRole());
 		int max = -1;
 		Move optMove = null;
+		Map<Move, List<MachineState>> moveStates = getStateMachine().getNextStates(state, getRole());
+
 		for (Move move: moveStates.keySet()) {
+			// minimize
 			int min = -1;
 			for (MachineState nextState: moveStates.get(move)) {
 				int value = minimaxValue(nextState);
@@ -90,12 +103,13 @@ public class MinimaxGamer extends StateMachineGamer {
 					min = value;
 				}
 			}
+			
+			// maximize
 			if (max < 0 || min > max) {
 				max = min;
 				optMove = move;
 			}
 		}
-		System.out.println(">> cache size: " + stateCache.size());
 		return optMove;
 	}
 	
