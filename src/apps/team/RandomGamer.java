@@ -19,7 +19,6 @@ import util.statemachine.exceptions.TransitionDefinitionException;
 import util.statemachine.implementation.prover.ProverStateMachine;
 
 public class RandomGamer extends Gamer {
-	
 
 	private Match match;
 	private Role role;
@@ -31,7 +30,6 @@ public class RandomGamer extends Gamer {
 		return "PGGGPPG Random";
 	}
 	
-
 	@Override
 	public boolean start(String matchId, GdlProposition roleName, Game game, 
 		int startClock, int playClock, long receptionTime) throws MetaGamingException {
@@ -46,7 +44,6 @@ public class RandomGamer extends Gamer {
 		
 		// set our player's role
 		role = stateMachine.getRoleFromProp(roleName);
-		
 		return true;
 	}
 
