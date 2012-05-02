@@ -1,5 +1,6 @@
 package apps.team;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -7,9 +8,6 @@ import player.gamer.statemachine.StateMachineGamer;
 import util.statemachine.MachineState;
 import util.statemachine.Move;
 import util.statemachine.StateMachine;
-import util.statemachine.exceptions.GoalDefinitionException;
-import util.statemachine.exceptions.MoveDefinitionException;
-import util.statemachine.exceptions.TransitionDefinitionException;
 import util.statemachine.implementation.prover.ProverStateMachine;
 
 public class Engine extends StateMachineGamer {
@@ -20,7 +18,17 @@ public class Engine extends StateMachineGamer {
     // N in a BFS for some N
     private class TreeLevel
     {
+	TreeLevel()
+	{
+	    this.nodesToExpand = new ArrayList<GameNode>();
+	}
+	
+	void addNode(GameNode node) {
+	    this.nodesToExpand.add(node);
+	}
+	
 	List<GameNode> nodesToExpand;
+	boolean finished;
     }
     
     // A node in the search tree. Note that this is *not* isomorphic to a
@@ -32,6 +40,12 @@ public class Engine extends StateMachineGamer {
     // the caching decisions elsewhere.
     private class GameNode
     {
+	GameNode(GameNode parent, int moveNum)
+	{
+	    this.parent = parent;
+	    this.moveNum = moveNum;
+	}
+	
 	// Which GameNode led to us
 	GameNode parent;
 	// Which move number in the parent's MachineState led to us 
@@ -50,7 +64,29 @@ public class Engine extends StateMachineGamer {
     public StateMachine getInitialStateMachine() {
 	return new ProverStateMachine();
     }
-
+    
+    public Engine()
+    {
+	this.levelsToExpand = new ArrayList<TreeLevel>();
+    }
+    
+    public Move stateMachineSelectMove(long timeout) {
+	MachineState currentState = super.getCurrentState();
+	GameNode rootNode = new GameNode(null, 0);
+	TreeLevel rootLevel = new TreeLevel();
+	rootLevel.addNode(rootNode);
+	levelsToExpand.add(rootLevel);
+	
+	expandNode(rootNode, 1);
+	return null;
+    }
+    
+    void expandNode(GameNode node, int intoLevel)
+    {
+	
+    }
+    
+    /*
     @Override
     public Move stateMachineSelectMove(long timeout)
 	    throws MoveDefinitionException, TransitionDefinitionException {
@@ -65,6 +101,7 @@ public class Engine extends StateMachineGamer {
 	// shouldn't happen, but just in case, return a random move
 	return getStateMachine().getRandomMove(getCurrentState(), getRole());
     }
+    */
 
     private int minimaxValue(MachineState state) throws Exception {
 	// already computed
