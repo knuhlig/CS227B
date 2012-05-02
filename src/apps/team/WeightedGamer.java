@@ -52,8 +52,6 @@ public class WeightedGamer extends HeuristicGamer {
 		}
 		sum /= numTrials;
 		
-		System.out.println("! " + playerMobilityScore + ", " + playerFocusScore + ", " + opponentMobilityScore + ", " + opponentFocusScore);
-
 		// Weights
 		double w1 = 0.2, w2 = 0.2, w3 = 0.2, w4 = 0.15, w5 = 1 - (w1 + w2+ w3 + w4);
 		return (int) (w1 * playerMobilityScore + w2 * playerFocusScore + w3
