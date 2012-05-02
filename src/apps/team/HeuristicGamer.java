@@ -13,6 +13,7 @@ import util.statemachine.StateMachine;
 import util.statemachine.exceptions.GoalDefinitionException;
 import util.statemachine.exceptions.MoveDefinitionException;
 import util.statemachine.exceptions.TransitionDefinitionException;
+import util.statemachine.implementation.propnet.PropNetStateMachine;
 import util.statemachine.implementation.prover.ProverStateMachine;
 
 public abstract class HeuristicGamer extends StateMachineGamer {
@@ -20,16 +21,21 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 	private static final int GOAL_MIN = 0;
 	private static final int GOAL_MAX = 100;
 	
+	// configurable
+	private long timeoutBuffer = 1000;
+	
+	// cache
+	private Map<MachineState, Integer> terminalCache;
+	private Map<MachineState, Integer> heuristicCache;
+	private Map<MachineState, Map<Move, List<MachineState>>> transitionCache;
+	
+	// in-game temporary state
 	private long timeout;
 	private boolean depthLimited;
 	
-	private long timeoutBuffer = 1000;
-	
-	private Map<MachineState, Integer> terminalCache;
-	private Map<MachineState, Map<Move, List<MachineState>>> transitionCache;
-	
-	public HeuristicGamer() {
+	public void reset() {
 		terminalCache = new HashMap<MachineState, Integer>();
+		heuristicCache = new HashMap<MachineState, Integer>();
 		transitionCache = new HashMap<MachineState, Map<Move,List<MachineState>>>();
 	}
 	
@@ -37,10 +43,13 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 
 	@Override
 	public StateMachine getInitialStateMachine() {
-		return new ProverStateMachine();
+		// initialize
+		reset();
+		return new PropNetStateMachine();
+		//return new ProverStateMachine();
 	}
 	
-	private Map<Move, List<MachineState>> getTransitions(MachineState state) throws Exception {
+	public Map<Move, List<MachineState>> getTransitions(MachineState state) throws Exception {
 		if (!transitionCache.containsKey(state)) {
 			Map<Move, List<MachineState>> transitions = getStateMachine().getNextStates(state, getRole());
 			transitionCache.put(state, transitions);
@@ -57,6 +66,7 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 		}
 		return beta;
 	}
+	private int count = 0;
 	
 	private Pair<Integer, Move> dls(MachineState state, int depth, int alpha, int beta) throws Exception {
 		// check periodically for a timeout
@@ -64,6 +74,7 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 			System.out.println("timing out: " + System.currentTimeMillis() + " getting close to " + timeout);
 			throw new RuntimeException("search timeout");
 		}
+		count++;
 		
 		StateMachine sm = getStateMachine();
 		
@@ -81,10 +92,11 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 		
 		// depth limit reached
 		if (depth == 0) {
-			// return heuristic value, don't cache?
 			depthLimited = true;
-			int value = getHeuristicValue(state);
-			return new Pair<Integer, Move>(value, null);
+			if (!heuristicCache.containsKey(state)) {
+				heuristicCache.put(state, getHeuristicValue(state));
+			}
+			return new Pair<Integer, Move>(heuristicCache.get(state), null);
 		}
 	
 		// recurse: minimax
@@ -105,15 +117,8 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 		// cache?
 		return new Pair<Integer, Move>(alpha, optMove);
 	}
-
-	@Override
-	public void stateMachineMetaGame(long timeout)
-			throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException {
-	}
-
-	@Override
-	public Move stateMachineSelectMove(long timeout)
-			throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException {
+	
+	private Move searchGameTree(long timeout) throws MoveDefinitionException {
 		this.timeout = timeout;
 		Pair<Integer, Move> opt = null;
 		try {
@@ -139,6 +144,24 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 		// didn't evaluate any moves, shouldn't happen in practice
 		System.out.println(">> returning random move");
 		return getStateMachine().getRandomMove(getCurrentState(), getRole());
+	}
+
+	@Override
+	public void stateMachineMetaGame(long timeout)
+			throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException {
+		System.out.println(">> metagaming");
+		long start = System.currentTimeMillis();
+		count = 0;
+		searchGameTree(timeout);
+		System.out.println("count: " + count);
+		System.out.println("avg: " + count*1000.0/(System.currentTimeMillis() - start));
+		System.out.println(">> done metagaming");
+	}
+
+	@Override
+	public Move stateMachineSelectMove(long timeout)
+			throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException {
+		return searchGameTree(timeout);
 	}
 
 	@Override
