@@ -4,6 +4,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.sun.tools.javac.util.Pair;
+
 import player.gamer.statemachine.StateMachineGamer;
 import util.statemachine.MachineState;
 import util.statemachine.Move;
@@ -20,15 +22,17 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 	
 	private long timeout;
 	private int count;
+	private boolean depthLimited;
+	
 	private long timeoutBuffer = 2000;
 	private int timeoutCheckInterval = 200;
 	
 	private Map<MachineState, Integer> terminalCache;
-	private Map<MachineState, Integer> stateCache;
+	private Map<MachineState, Map<Move, List<MachineState>>> transitionCache;
 	
 	public HeuristicGamer() {
 		terminalCache = new HashMap<MachineState, Integer>();
-		stateCache = new HashMap<MachineState, Integer>();
+		transitionCache = new HashMap<MachineState, Map<Move,List<MachineState>>>();
 	}
 	
 	public abstract int getHeuristicValue(MachineState state) throws Exception;
@@ -38,27 +42,23 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 		return new ProverStateMachine();
 	}
 	
-	public int getCachedValue(MachineState state) {
-		boolean isTerminal = getStateMachine().isTerminal(state);
-		return getCachedValue(state, isTerminal);
-	}
-	
-	public int getCachedValue(MachineState state, boolean isTerminal) {
-		if (isTerminal) {
-			return terminalCache.get(state);
+	private Map<Move, List<MachineState>> getTransitions(MachineState state) throws Exception {
+		if (!transitionCache.containsKey(state)) {
+			Map<Move, List<MachineState>> transitions = getStateMachine().getNextStates(state, getRole());
+			transitionCache.put(state, transitions);
 		}
-		return stateCache.get(state);
+		return transitionCache.get(state);
 	}
 	
 	private int dlsMin(List<MachineState> states, int depth) throws Exception {
 		int min = GOAL_MAX;
 		for (MachineState state: states) {
-			min = Math.min(min, dls(state, depth));
+			min = Math.min(min, dls(state, depth).fst);
 		}
 		return min;
 	}
 	
-	private int dls(MachineState state, int depth) throws Exception {
+	private Pair<Integer, Move> dls(MachineState state, int depth) throws Exception {
 		// check periodically for a timeout
 		if (++count % timeoutCheckInterval == 0) {
 			if (System.currentTimeMillis() + timeoutBuffer >= timeout) {
@@ -70,78 +70,71 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 		
 		// terminal state, cached
 		if (terminalCache.containsKey(state)) {
-			return terminalCache.get(state);
+			return new Pair<Integer, Move>(terminalCache.get(state), null);
 		}
 		
 		// terminal state, uncached
 		if (sm.isTerminal(state)) {
 			int value = sm.getGoal(state, getRole());
 			terminalCache.put(state, value);
-			return value;
+			return new Pair<Integer, Move>(value, null);
 		}
 		
 		// depth limit reached
 		if (depth == 0) {
 			// return heuristic value, don't cache?
+			depthLimited = true;
 			int value = getHeuristicValue(state);
-			return value;
+			return new Pair<Integer, Move>(value, null);
 		}
 	
 		// recurse: minimax
-		Map<Move, List<MachineState>> legalMoves = sm.getNextStates(getCurrentState(), getRole());
-		int max = GOAL_MIN;
+		Map<Move, List<MachineState>> legalMoves = getTransitions(state);
+		Move optMove = null;
+		Integer optValue = GOAL_MIN;
+		
 		for (Move move: legalMoves.keySet()) {
 			int cur = dlsMin(legalMoves.get(move), depth - 1);
-			max = Math.max(max, cur);
+			if (cur > optValue) {
+				optValue = cur;
+				optMove = move;
+			}
 		}
 		
 		// cache?
-		stateCache.put(state, max);
-		return max;
+		return new Pair<Integer, Move>(optValue, optMove);
 	}
 
 	@Override
 	public void stateMachineMetaGame(long timeout)
 			throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException {
 	}
-	
-	public Move findMove(MachineState state, int value) throws Exception {
-		Map<Move, List<MachineState>> nextStates = getStateMachine().getNextStates(state, getRole());
-		for (Move move: nextStates.keySet()) {
-			int min = GOAL_MAX;
-			for (MachineState next: nextStates.get(move)) {
-				min = Math.min(min, getCachedValue(state));
-			}
-			if (min == value) {
-				return move;
-			}
-		}
-		return null;
-	}
 
 	@Override
 	public Move stateMachineSelectMove(long timeout)
 			throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException {
-		stateCache.clear();
+		depthLimited = true;
 		count = 0;
-		Move optMove = null;
-		int optVal = GOAL_MIN - 1;
+		Pair<Integer, Move> opt = null;
+		int depth = 0;
+		
 		try {
-			this.timeout = timeout;
-			for (int depth = 1; ; depth++) {
-				System.out.println(">> exploring depth " + depth);
-				int val = dls(getCurrentState(), depth);
-				if (val > optVal) {
-					optVal = val;
-					optMove = findMove(getCurrentState(), val);
+			while (true) {
+				depthLimited = false;
+				depth++;
+				System.out.println(">> exploring to depth " + depth);
+				opt = dls(getCurrentState(), depth);
+				if (!depthLimited) {
+					System.out.println(">> explored full depth");
+					break;
 				}
 			}
 		} catch (Exception e) {
-			System.out.println(">> " + e.getMessage());
+			System.out.println(">> stopping: " + e.getMessage());
 		}
 		
-		if (optMove != null) {
-			return optMove;
+		if (opt != null) {
+			return opt.snd;
 		}
 		
 		// didn't evaluate any moves, shouldn't happen in practice
