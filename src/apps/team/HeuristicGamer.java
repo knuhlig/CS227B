@@ -1,8 +1,11 @@
 package apps.team;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import com.sun.tools.javac.util.Pair;
 
 import player.gamer.statemachine.StateMachineGamer;
 import util.statemachine.MachineState;
@@ -47,12 +50,48 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 		//return new ProverStateMachine();
 	}
 	
+	public int getTerminalValue(MachineState state) throws GoalDefinitionException {
+		if (!terminalCache.containsKey(state)) {
+			terminalCache.put(state, getStateMachine().getGoal(state, getRole()));
+		}
+		return terminalCache.get(state);
+	}
+	
 	public Map<Move, List<MachineState>> getTransitions(MachineState state) throws Exception {
 		if (!transitionCache.containsKey(state)) {
 			Map<Move, List<MachineState>> transitions = getStateMachine().getNextStates(state, getRole());
 			transitionCache.put(state, transitions);
 		}
 		return transitionCache.get(state);
+	}
+	
+	public boolean isTerminal(MachineState state) {
+		if (terminalCache.containsKey(state)) {
+			return true;
+		}
+		return getStateMachine().isTerminal(state);
+	}
+	
+	public int randomInt(int n) {
+		return (int) (Math.random() * n);
+	}
+	
+	public MachineState getRandomSuccessor(MachineState state) throws Exception {
+		Map<Move, List<MachineState>> transitions = getTransitions(state);
+		List<Move> moves = new ArrayList<Move>(transitions.keySet());
+		Move randMove = moves.get(randomInt(moves.size()));
+		List<MachineState> successors = transitions.get(randMove);
+		return successors.get(randomInt(successors.size()));
+	}
+	
+	public MachineState depthCharge(MachineState state) throws Exception {
+        while(!isTerminal(state)) {
+        	if (System.currentTimeMillis() + timeoutBuffer >= timeout) {
+        		throw new RuntimeException("search timeout");
+        	}
+            state = getRandomSuccessor(state);
+        }
+        return state;
 	}
 	
 	private int dlsMin(List<MachineState> states, int depth, int alpha, int beta) throws Exception {

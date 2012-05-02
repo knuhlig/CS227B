@@ -47,7 +47,7 @@ public class WeightedGamer extends HeuristicGamer {
 		// Monte Carlo Heuristic
 		int sum = 0;
 		for (int i = 0; i < numTrials; i++) {
-			MachineState terminal = getStateMachine().performDepthCharge(state, null);
+			MachineState terminal = depthCharge(state);
 			sum += getStateMachine().getGoal(terminal, getRole());
 		}
 		sum /= numTrials;
