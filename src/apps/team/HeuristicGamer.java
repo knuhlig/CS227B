@@ -21,11 +21,9 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 	private static final int GOAL_MAX = 100;
 	
 	private long timeout;
-	private int count;
 	private boolean depthLimited;
 	
-	private long timeoutBuffer = 2000;
-	private int timeoutCheckInterval = 200;
+	private long timeoutBuffer = 1000;
 	
 	private Map<MachineState, Integer> terminalCache;
 	private Map<MachineState, Map<Move, List<MachineState>>> transitionCache;
@@ -50,20 +48,21 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 		return transitionCache.get(state);
 	}
 	
-	private int dlsMin(List<MachineState> states, int depth) throws Exception {
-		int min = GOAL_MAX;
+	private int dlsMin(List<MachineState> states, int depth, int alpha, int beta) throws Exception {
 		for (MachineState state: states) {
-			min = Math.min(min, dls(state, depth).fst);
+			beta = Math.min(beta, dls(state, depth, alpha, beta).fst);
+			if (beta <= alpha) {
+				break;
+			}
 		}
-		return min;
+		return beta;
 	}
 	
-	private Pair<Integer, Move> dls(MachineState state, int depth) throws Exception {
+	private Pair<Integer, Move> dls(MachineState state, int depth, int alpha, int beta) throws Exception {
 		// check periodically for a timeout
-		if (++count % timeoutCheckInterval == 0) {
-			if (System.currentTimeMillis() + timeoutBuffer >= timeout) {
-				throw new RuntimeException("search timeout");
-			}
+		if (System.currentTimeMillis() + timeoutBuffer >= timeout) {
+			System.out.println("timing out: " + System.currentTimeMillis() + " getting close to " + timeout);
+			throw new RuntimeException("search timeout");
 		}
 		
 		StateMachine sm = getStateMachine();
@@ -91,18 +90,20 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 		// recurse: minimax
 		Map<Move, List<MachineState>> legalMoves = getTransitions(state);
 		Move optMove = null;
-		Integer optValue = GOAL_MIN;
 		
 		for (Move move: legalMoves.keySet()) {
-			int cur = dlsMin(legalMoves.get(move), depth - 1);
-			if (cur > optValue) {
-				optValue = cur;
+			int cur = dlsMin(legalMoves.get(move), depth - 1, alpha, beta);
+			if (cur > alpha) {
+				alpha = cur;
 				optMove = move;
+			}
+			if (beta <= alpha) {
+				break;
 			}
 		}
 		
 		// cache?
-		return new Pair<Integer, Move>(optValue, optMove);
+		return new Pair<Integer, Move>(alpha, optMove);
 	}
 
 	@Override
@@ -113,17 +114,15 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 	@Override
 	public Move stateMachineSelectMove(long timeout)
 			throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException {
-		depthLimited = true;
-		count = 0;
+		this.timeout = timeout;
 		Pair<Integer, Move> opt = null;
-		int depth = 0;
-		
 		try {
+			int depth = 0;
 			while (true) {
 				depthLimited = false;
 				depth++;
 				System.out.println(">> exploring to depth " + depth);
-				opt = dls(getCurrentState(), depth);
+				opt = dls(getCurrentState(), depth, GOAL_MIN, GOAL_MAX);
 				if (!depthLimited) {
 					System.out.println(">> explored full depth");
 					break;
@@ -133,7 +132,7 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 			System.out.println(">> stopping: " + e.getMessage());
 		}
 		
-		if (opt != null) {
+		if (opt != null && opt.snd != null) {
 			return opt.snd;
 		}
 		

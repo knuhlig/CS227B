@@ -4,7 +4,7 @@ import util.statemachine.MachineState;
 
 public class Assign4Gamer extends HeuristicGamer {
 	
-	private int numTrials = 5;
+	private int numTrials = 3;
 	
 	@Override
 	public String getName() {
