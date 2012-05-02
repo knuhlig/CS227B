@@ -3,6 +3,7 @@ package util.gdl.grammar;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @SuppressWarnings("serial")
 public final class GdlOr extends GdlLiteral
@@ -22,6 +23,13 @@ public final class GdlOr extends GdlLiteral
 		return disjuncts.size();
 	}
 
+	@Override
+	public void getDependencies(Set<String> types) {
+		for (GdlLiteral literal: disjuncts) {
+			literal.getDependencies(types);
+		}
+	}
+	
 	private boolean computeGround()
 	{
 		for (GdlLiteral literal : disjuncts)
@@ -35,6 +43,24 @@ public final class GdlOr extends GdlLiteral
 		return true;
 	}
 
+	@Override
+	public boolean isMoveIndependent() {
+		for (GdlLiteral literal: disjuncts) {
+			if (!literal.isMoveIndependent()) {
+				return false;
+			}
+		}
+		return true;
+	}
+	
+	@Override
+	public void computeBindings(Map<String, Set<String>> bindings,
+			Map<String, List<Set<String>>> typeValues) {
+		for (GdlLiteral literal: disjuncts) {
+			literal.computeBindings(bindings, typeValues);
+		}
+	}
+	
 	public GdlLiteral get(int index)
 	{
 		return disjuncts.get(index);

@@ -3,6 +3,7 @@ package util.gdl.grammar;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @SuppressWarnings("serial")
 public final class GdlRule extends Gdl
@@ -22,6 +23,13 @@ public final class GdlRule extends Gdl
 	public int arity()
 	{
 		return body.size();
+	}
+	
+	@Override
+	public void getDependencies(Set<String> types) {
+		for (GdlLiteral literal: body) {
+			literal.getDependencies(types);
+		}
 	}
 
 	private Boolean computeGround()

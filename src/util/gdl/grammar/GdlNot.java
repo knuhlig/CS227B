@@ -3,6 +3,7 @@ package util.gdl.grammar;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @SuppressWarnings("serial")
 public final class GdlNot extends GdlLiteral
@@ -21,6 +22,11 @@ public final class GdlNot extends GdlLiteral
 	{
 		return body;
 	}
+	
+	@Override
+	public void getDependencies(Set<String> types) {
+		body.getDependencies(types);
+	}
 
 	@Override
 	public boolean isGround()
@@ -31,6 +37,17 @@ public final class GdlNot extends GdlLiteral
 		}
 
 		return ground;
+	}
+	
+	@Override
+	public boolean isMoveIndependent() {
+		return body.isMoveIndependent();
+	}
+	
+	@Override
+	public void computeBindings(Map<String, Set<String>> bindings,
+			Map<String, List<Set<String>>> typeValues) {
+		body.computeBindings(bindings, typeValues);
 	}
 
 	@Override

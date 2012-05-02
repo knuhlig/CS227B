@@ -7,8 +7,12 @@ import player.gamer.Gamer;
 import player.gamer.exception.MetaGamingException;
 import player.gamer.exception.MoveSelectionException;
 import util.game.Game;
+import util.gdl.grammar.Gdl;
+import util.gdl.grammar.GdlFunction;
 import util.gdl.grammar.GdlProposition;
+import util.gdl.grammar.GdlRelation;
 import util.gdl.grammar.GdlSentence;
+import util.gdl.grammar.GdlTerm;
 import util.match.Match;
 import util.statemachine.MachineState;
 import util.statemachine.Move;
@@ -33,7 +37,7 @@ public class RandomGamer extends Gamer {
 	@Override
 	public boolean start(String matchId, GdlProposition roleName, Game game, 
 		int startClock, int playClock, long receptionTime) throws MetaGamingException {
-
+		
 		// create the match
 		match = new Match(matchId, startClock, playClock, game);
 		

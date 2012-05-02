@@ -3,6 +3,7 @@ package util.gdl.grammar;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @SuppressWarnings("serial")
 public final class GdlConstant extends GdlTerm
@@ -18,6 +19,12 @@ public final class GdlConstant extends GdlTerm
 	public String getValue()
 	{
 		return value;
+	}
+	
+	@Override
+	public void getDependencies(Set<String> types) {
+		// TODO Auto-generated method stub
+		
 	}
 
 	@Override

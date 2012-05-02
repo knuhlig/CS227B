@@ -3,6 +3,7 @@ package util.gdl.grammar;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @SuppressWarnings("serial")
 public final class GdlDistinct extends GdlLiteral
@@ -19,6 +20,12 @@ public final class GdlDistinct extends GdlLiteral
 		ground = null;
 	}
 
+	@Override
+	public void getDependencies(Set<String> types) {
+		// TODO Auto-generated method stub
+		
+	}
+	
 	public GdlTerm getArg1()
 	{
 		return arg1;
@@ -38,6 +45,18 @@ public final class GdlDistinct extends GdlLiteral
 		}
 
 		return ground;
+	}
+	
+	@Override
+	public boolean isMoveIndependent() {
+		return true;
+	}
+	
+	@Override
+	public void computeBindings(Map<String, Set<String>> bindings,
+			Map<String, List<Set<String>>> typeValues) {
+		// TODO Auto-generated method stub
+		
 	}
 
 	@Override

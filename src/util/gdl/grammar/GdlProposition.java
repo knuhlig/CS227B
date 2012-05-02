@@ -3,6 +3,7 @@ package util.gdl.grammar;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @SuppressWarnings("serial")
 public final class GdlProposition extends GdlSentence
@@ -26,6 +27,12 @@ public final class GdlProposition extends GdlSentence
 	{
 		throw new RuntimeException("GdlPropositions have no body!");
 	}
+	
+	@Override
+	public void getDependencies(Set<String> types) {
+		// TODO Auto-generated method stub
+		
+	}
 
 	@Override
 	public GdlConstant getName()
@@ -39,6 +46,18 @@ public final class GdlProposition extends GdlSentence
 		return name.isGround();
 	}
 
+	@Override
+	public boolean isMoveIndependent() {
+		return true;
+	}
+	
+	@Override
+	public void computeBindings(Map<String, Set<String>> bindings,
+			Map<String, List<Set<String>>> typeValues) {
+		// TODO Auto-generated method stub
+		
+	}
+	
 	@Override
 	public String toString()
 	{

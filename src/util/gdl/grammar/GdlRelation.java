@@ -1,8 +1,10 @@
 package util.gdl.grammar;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @SuppressWarnings("serial")
 public final class GdlRelation extends GdlSentence
@@ -24,6 +26,17 @@ public final class GdlRelation extends GdlSentence
 	{
 		return body.size();
 	}
+	
+	@Override
+	public void getDependencies(Set<String> types) {
+		for (GdlTerm term: body) {
+			term.getDependencies(types);
+		}
+		String name = this.name.getValue();
+		if (!name.equals(T_TRUE)) {
+			types.add(name);
+		}
+	}
 
 	private boolean computeGround()
 	{
@@ -36,6 +49,35 @@ public final class GdlRelation extends GdlSentence
 		}
 
 		return true;
+	}
+	
+	@Override
+	public boolean isMoveIndependent() {
+		return !name.getValue().equals(T_DOES);
+	}
+	
+	@Override
+	public void computeBindings(Map<String, Set<String>> bindings,
+			Map<String, List<Set<String>>> typeValues) {
+		if (name.getValue().equals(T_TRUE)) {
+			GdlTerm term = get(0);
+			if (term instanceof GdlFunction) {
+				((GdlFunction) term).computeBindings(bindings, typeValues);
+			}
+		} else {
+			for (int i = 0; i < arity(); i++) {
+				GdlTerm term = get(i);
+				if (term instanceof GdlVariable) {
+					String varName = ((GdlVariable) term).getName();
+					Set<String> values = typeValues.get(name.getValue()).get(i);
+					if (!bindings.containsKey(varName)) {
+						bindings.put(varName, new HashSet<String>(values));
+					} else {
+						bindings.get(varName).retainAll(values);
+					}
+				}
+			}
+		}
 	}
 
 	@Override

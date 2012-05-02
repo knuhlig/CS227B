@@ -1,8 +1,10 @@
 package util.gdl.grammar;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @SuppressWarnings("serial")
 public final class GdlFunction extends GdlTerm
@@ -22,6 +24,14 @@ public final class GdlFunction extends GdlTerm
 	public int arity()
 	{
 		return body.size();
+	}
+	
+	@Override
+	public void getDependencies(Set<String> types) {
+		for (GdlTerm term: body) {
+			term.getDependencies(types);
+		}
+		types.add(name.getValue());
 	}
 
 	private boolean computeGround()
@@ -101,6 +111,22 @@ public final class GdlFunction extends GdlTerm
 		}
 		
 		return this;
+	}
+	
+	public void computeBindings(Map<String, Set<String>> bindings,
+			Map<String, List<Set<String>>> typeValues) {
+		for (int i = 0; i < arity(); i++) {
+			GdlTerm term = get(i);
+			if (term instanceof GdlVariable) {
+				String varName = ((GdlVariable) term).getName();
+				Set<String> values = typeValues.get(name.getValue()).get(i);
+				if (!bindings.containsKey(varName)) {
+					bindings.put(varName, new HashSet<String>(values));
+				} else {
+					bindings.get(varName).retainAll(values);
+				}
+			}
+		}
 	}
 
 	@Override

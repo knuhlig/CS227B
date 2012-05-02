@@ -16,6 +16,7 @@ public class AlphaBetaGamer extends StateMachineGamer {
 	
 	private Map<MachineState, Integer> stateCache = new HashMap<MachineState, Integer>();
 	private Map<MachineState, Boolean> exactValue = new HashMap<MachineState, Boolean>();
+	private long timeout;
 	
 	@Override
 	public String getName() {
@@ -24,12 +25,15 @@ public class AlphaBetaGamer extends StateMachineGamer {
 	
 	@Override
 	public StateMachine getInitialStateMachine() {
+		stateCache.clear();
 		return new ProverStateMachine();
 	}
 	
 	@Override
 	public Move stateMachineSelectMove(long timeout) throws MoveDefinitionException, TransitionDefinitionException {
 		try {
+			this.timeout = timeout;
+			System.out.println(">> cache size: " + stateCache.size());
 			Move opt = alphaBetaMove(getCurrentState());
 			System.out.println(">> cache size: " + stateCache.size());
 			return opt;
@@ -41,8 +45,18 @@ public class AlphaBetaGamer extends StateMachineGamer {
 		return getStateMachine().getRandomMove(getCurrentState(), getRole());
 	}
 	
+	private int count = 0;
+	
 	private int alphaBetaValue(MachineState state, int alpha, int beta) throws Exception {
-		if (stateCache.containsKey(state) && exactValue.get(state)) {
+		count++;
+		if (count % 2 == 0) {
+			if (System.currentTimeMillis() > timeout - 500) {
+				throw new RuntimeException("timeout");
+			}
+			System.out.println("considered: " + count);
+		}
+		
+		if (stateCache.containsKey(state)) {
 			return stateCache.get(state);
 		}
 		
@@ -80,7 +94,9 @@ public class AlphaBetaGamer extends StateMachineGamer {
 			alpha = Math.max(alpha, curBeta);
 		}
 		
-		stateCache.put(state, alpha);
+		if (isExact) {
+			stateCache.put(state, alpha);
+		}
 		exactValue.put(state, isExact);
 		return alpha;
 	}
@@ -98,6 +114,7 @@ public class AlphaBetaGamer extends StateMachineGamer {
 		
 		Map<Move, List<MachineState>> moveStates = getStateMachine().getNextStates(state, getRole());		
 		for (Move move: moveStates.keySet()) {
+			System.out.println("considering move " + move);
 			int min = 100;
 			for (MachineState nextState: moveStates.get(move)) {
 				min = Math.min(min, alphaBetaValue(nextState, optVal, min));
