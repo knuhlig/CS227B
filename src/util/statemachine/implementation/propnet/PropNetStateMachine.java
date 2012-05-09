@@ -31,10 +31,19 @@ import util.statemachine.implementation.prover.query.ProverQueryBuilder;
 
 @SuppressWarnings("unused")
 public class PropNetStateMachine extends StateMachine {
-    /** The underlying proposition network  */
+    
+	public static NativePropNetStateMachine compileNative(List<Gdl> description) {
+		PropNetStateMachine raw = new PropNetStateMachine();
+		raw.initialize(description);
+		return raw.compile();
+	}
+	
+	/** The underlying proposition network  */
     private PropNet propNet;
     /** The topological ordering of the propositions */
     private List<Proposition> ordering;
+    private List<Component> componentOrdering;
+    
     /** The player roles */
     private List<Role> roles;
     
@@ -51,8 +60,21 @@ public class PropNetStateMachine extends StateMachine {
 			e.printStackTrace();
 		}
         roles = propNet.getRoles();
-        ordering = getOrdering();
-    }    
+        componentOrdering = new ArrayList<Component>();
+        ordering = getOrdering(componentOrdering);
+    }
+    
+    public NativePropNetStateMachine compile() {
+    	NativeCodeGenerator cg = new NativeCodeGenerator(propNet, roles, componentOrdering);
+    	NativePropNetStateMachine machine = cg.generateCode();
+    	for (Set<Proposition> roleLegal: propNet.getLegalPropositions().values()) {
+    		for (Proposition legal: roleLegal) {
+    			int idx = cg.getNativeIdx(legal);
+        		machine.addMapping(idx, getMoveFromProposition(legal));
+    		}
+    	}
+    	return machine;
+    }
 
 	/**
 	 * Computes if the state is terminal. Should return the value
@@ -161,7 +183,7 @@ public class PropNetStateMachine extends StateMachine {
 	 * 
 	 * @return The order in which the truth values of propositions need to be set.
 	 */
-	public List<Proposition> getOrdering()
+	public List<Proposition> getOrdering(List<Component> componentOrdering)
 	{
 	    // List to contain the topological ordering.
 	    List<Proposition> order = new LinkedList<Proposition>();
@@ -211,6 +233,7 @@ public class PropNetStateMachine extends StateMachine {
 				if (c instanceof Proposition) {
 					order.add((Proposition) c);
 				}
+				componentOrdering.add(c);
 				for (Component output: c.getOutputs()) {
 					if (!marked.contains(output)) {
 						fringe.add(output);
@@ -334,52 +357,5 @@ public class PropNetStateMachine extends StateMachine {
 		}
 		return new MachineState(contents);
 	}
-	
-	/*
-	private Map<String, Integer> translation = new HashMap<String, Integer>();
-	private String nativeClass;
-	
-	private String getNativeVar(Proposition p) {
-		return "props[" + translation.get(p.getName()) + "]";
-	}
-	
-	private void generateTranslation() {
-		int count = 0;
-    	for (Proposition p: propNet.getPropositions()) {
-    		GdlTerm name = p.getName();
-    		if (!translation.containsKey(name)) {
-    			translation.put(name.toString(), count++);
-    		}
-    	}
-	}
-
-	
-	private void writeLine(int indent, String line) {
-		for (int i = 0; i < indent; i++) System.out.print("\t");
-		System.out.println(line);
-	}
-    
-    private void generateNativeCode() {
-    	generateTranslation();
-    	nativeClass = "StateMachine" + System.currentTimeMillis();
-    	
-    	writeLine(0, "public class " + nativeClass + "{");
-    	writeLine(1, "private Map<String, Integer> translation = new HashMap<String, Integer>();");
-    	writeLine(1, "private boolean props = new boolean[" + translation.size() + "];");
-    	
-    	writeLine(1, "public void initialize() {");
-    	for (String term: translation.keySet()) {
-    		writeLine(2, "translation.put(\""+term+"\", "+translation.get(term)+");");
-    	}
-    	writeLine(1, "}");
-    	
-    	// set state
-    	writeLine(1, "private void setState(MachineState state) {");
-    	writeLine(2, getNativeVar(propNet.getInitProposition()) + " = false;");
-    	writeLine(1, "}");
-    	
-    	writeLine(0, "}");
-    }
-    */
     
 }

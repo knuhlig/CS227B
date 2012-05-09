@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import player.gamer.statemachine.StateMachineGamer;
+import util.gdl.grammar.Gdl;
 import util.statemachine.MachineState;
 import util.statemachine.Move;
 import util.statemachine.StateMachine;
@@ -24,7 +25,7 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 	private long timeoutBuffer = 1000;
 	
 	// cache
-	private Map<MachineState, Integer> terminalCache;
+	private Map<MachineState, Pair<Integer, Move>> stateCache;
 	private Map<MachineState, Integer> heuristicCache;
 	private Map<MachineState, Map<Move, List<MachineState>>> transitionCache;
 	
@@ -33,7 +34,7 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 	private boolean depthLimited;
 	
 	public void reset() {
-		terminalCache = new HashMap<MachineState, Integer>();
+		stateCache = new HashMap<MachineState, Pair<Integer, Move>>();
 		heuristicCache = new HashMap<MachineState, Integer>();
 		transitionCache = new HashMap<MachineState, Map<Move,List<MachineState>>>();
 	}
@@ -44,29 +45,32 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 	public StateMachine getInitialStateMachine() {
 		// initialize
 		reset();
+		List<Gdl> rules = getMatch().getGame().getRules();
+		//return PropNetStateMachine.compileNative(rules);
 		return new PropNetStateMachine();
 		//return new ProverStateMachine();
 	}
 	
 	public int getTerminalValue(MachineState state) throws GoalDefinitionException {
-		if (!terminalCache.containsKey(state)) {
-			terminalCache.put(state, getStateMachine().getGoal(state, getRole()));
+		if (!stateCache.containsKey(state)) {
+			stateCache.put(state, new Pair<Integer, Move>(getStateMachine().getGoal(state, getRole()), null));
 		}
-		return terminalCache.get(state);
+		return stateCache.get(state).fst;
 	}
 	
-	public Map<Move, List<MachineState>> getTransitions(MachineState state) throws Exception {
-		if (!transitionCache.containsKey(state)) {
-			Map<Move, List<MachineState>> transitions = getStateMachine().getNextStates(state, getRole());
+	public Map<Move, List<MachineState>> getTransitions(MachineState state, boolean cache) throws Exception {
+		if (transitionCache.containsKey(state)) {
+			return transitionCache.get(state);
+		}
+
+		Map<Move, List<MachineState>> transitions = getStateMachine().getNextStates(state, getRole());
+		if (cache) {
 			transitionCache.put(state, transitions);
 		}
-		return transitionCache.get(state);
+		return transitions;
 	}
 	
 	public boolean isTerminal(MachineState state) {
-		if (terminalCache.containsKey(state)) {
-			return true;
-		}
 		return getStateMachine().isTerminal(state);
 	}
 	
@@ -75,7 +79,7 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 	}
 	
 	public MachineState getRandomSuccessor(MachineState state) throws Exception {
-		Map<Move, List<MachineState>> transitions = getTransitions(state);
+		Map<Move, List<MachineState>> transitions = getTransitions(state, false);
 		List<Move> moves = new ArrayList<Move>(transitions.keySet());
 		Move randMove = moves.get(randomInt(moves.size()));
 		List<MachineState> successors = transitions.get(randMove);
@@ -83,13 +87,33 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 	}
 	
 	public MachineState depthCharge(MachineState state) throws Exception {
-        while(!isTerminal(state)) {
+		int depth = 0;
+		while(!isTerminal(state)) {
+        	// maybe only do this every n-th iteration?
         	if (System.currentTimeMillis() + timeoutBuffer >= timeout) {
         		throw new RuntimeException("search timeout");
         	}
             state = getRandomSuccessor(state);
+            depth++;
         }
         return state;
+	}
+	
+	public List<MachineState> depthChargeFull(MachineState state) throws Exception {
+		int depth = 0;
+		List<MachineState> chain = new ArrayList<MachineState>();
+		chain.add(state);
+		
+		while(!isTerminal(state)) {
+        	// maybe only do this every n-th iteration?
+        	if (System.currentTimeMillis() + timeoutBuffer >= timeout) {
+        		throw new RuntimeException("search timeout");
+        	}
+            state = getRandomSuccessor(state);
+            chain.add(state);
+            depth++;
+        }
+        return chain;
 	}
 	
 	private int dlsMin(List<MachineState> states, int depth, int alpha, int beta) throws Exception {
@@ -101,7 +125,6 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 		}
 		return beta;
 	}
-	private int count = 0;
 	
 	private Pair<Integer, Move> dls(MachineState state, int depth, int alpha, int beta) throws Exception {
 		// check periodically for a timeout
@@ -109,20 +132,19 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 			System.out.println("timing out: " + System.currentTimeMillis() + " getting close to " + timeout);
 			throw new RuntimeException("search timeout");
 		}
-		count++;
 		
 		StateMachine sm = getStateMachine();
 		
-		// terminal state, cached
-		if (terminalCache.containsKey(state)) {
-			return new Pair<Integer, Move>(terminalCache.get(state), null);
+		// exact state, cached
+		if (stateCache.containsKey(state)) {
+			return stateCache.get(state);
 		}
 		
 		// terminal state, uncached
 		if (sm.isTerminal(state)) {
 			int value = sm.getGoal(state, getRole());
-			terminalCache.put(state, value);
-			return new Pair<Integer, Move>(value, null);
+			stateCache.put(state, new Pair<Integer, Move>(value, null));
+			return stateCache.get(state);
 		}
 		
 		// depth limit reached
@@ -135,12 +157,12 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 		}
 	
 		// recurse: minimax
-		Map<Move, List<MachineState>> legalMoves = getTransitions(state);
+		Map<Move, List<MachineState>> legalMoves = getTransitions(state, true);
 		Move optMove = null;
 		
 		for (Move move: legalMoves.keySet()) {
 			int cur = dlsMin(legalMoves.get(move), depth - 1, alpha, beta);
-			if (cur > alpha) {
+			if (cur >= alpha) {
 				alpha = cur;
 				optMove = move;
 			}
@@ -149,12 +171,69 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 			}
 		}
 		
-		// cache?
 		return new Pair<Integer, Move>(alpha, optMove);
 	}
 	
-	private Move searchGameTree(long timeout) throws MoveDefinitionException {
-		this.timeout = timeout;
+	private int minSearch(List<MachineState> states, int depth) throws Exception {
+		int min = GOAL_MAX + 1;
+		for (MachineState state: states) {
+			int val = maxSearch(state, depth).fst;
+			if (val < min) {
+				min = val;
+			}
+		}
+		return min;
+	}
+	
+	
+	private Pair<Integer, Move> maxSearch(MachineState state, int depth) throws Exception {
+		// check periodically for a timeout
+		if (System.currentTimeMillis() + timeoutBuffer >= timeout) {
+			System.out.println("timing out: " + System.currentTimeMillis() + " getting close to " + timeout);
+			throw new RuntimeException("search timeout");
+		}
+		
+		StateMachine sm = getStateMachine();
+		
+		// exact state, cached
+		if (stateCache.containsKey(state)) {
+			return stateCache.get(state);
+		}
+		
+		// terminal state, uncached
+		if (sm.isTerminal(state)) {
+			int value = sm.getGoal(state, getRole());
+			stateCache.put(state, new Pair<Integer, Move>(value, null));
+			return stateCache.get(state);
+		}
+		
+		// depth limit reached
+		if (depth == 0) {
+			depthLimited = true;
+			if (!heuristicCache.containsKey(state)) {
+				heuristicCache.put(state, getHeuristicValue(state));
+			}
+			return new Pair<Integer, Move>(heuristicCache.get(state), null);
+		}
+	
+		// recurse: minimax
+		Map<Move, List<MachineState>> legalMoves = getTransitions(state, true);
+		Move optMove = null;
+		int optVal = -1;
+		
+		for (Move move: legalMoves.keySet()) {
+			int cur = minSearch(legalMoves.get(move), depth - 1);
+			if (cur > optVal) {
+				optVal = cur;
+				optMove = move;
+			}
+		}
+		
+		stateCache.put(state, new Pair<Integer, Move>(optVal, optMove));
+		return stateCache.get(state);
+	}
+	
+	private Move searchGameTree() throws MoveDefinitionException {
 		Pair<Integer, Move> opt = null;
 		try {
 			int depth = 0;
@@ -170,6 +249,7 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 			}
 		} catch (Exception e) {
 			System.out.println(">> stopping: " + e.getMessage());
+			e.printStackTrace();
 		}
 		
 		if (opt != null && opt.snd != null) {
@@ -180,23 +260,51 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 		System.out.println(">> returning random move");
 		return getStateMachine().getRandomMove(getCurrentState(), getRole());
 	}
+	
+	private void createEndGameBook() {
+		try {
+			int depth = 1;
+			while (true) {
+				System.out.println("end game book: depth " + depth);
+				for (int i = 0; i < 10; i++) {
+					List<MachineState> chain = depthChargeFull(getCurrentState());
+					int startIdx = Math.max(0, chain.size() - depth - 1);
+					MachineState start = chain.get(startIdx);
+					maxSearch(start, 10000);			
+				}
+				if (stateCache.containsKey(getCurrentState())) {
+					break;
+				}
+				depth++;
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
 
 	@Override
 	public void stateMachineMetaGame(long timeout)
 			throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException {
 		System.out.println(">> metagaming");
-		long start = System.currentTimeMillis();
-		count = 0;
-		searchGameTree(timeout);
-		System.out.println("count: " + count);
-		System.out.println("avg: " + count*1000.0/(System.currentTimeMillis() - start));
+		
+		long curTime = System.currentTimeMillis();
+		long duration = timeout - curTime;
+		
+		this.timeout = curTime + duration / 2;
+		System.out.println("creating end game book");
+		//createEndGameBook();
+		
+		this.timeout = curTime + duration;
+		searchGameTree();
+		
 		System.out.println(">> done metagaming");
 	}
 
 	@Override
 	public Move stateMachineSelectMove(long timeout)
 			throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException {
-		return searchGameTree(timeout);
+		this.timeout = timeout;
+		return searchGameTree();
 	}
 
 	@Override

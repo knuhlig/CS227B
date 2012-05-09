@@ -1,0 +1,153 @@
+
+
+( role red )
+( role green )
+( role blue )
+( role yellow )
+
+( row 1 )
+( row 2 )
+( row 3 )
+( row 4 )
+( row 5 )
+( row 6 )
+( row 7 )
+( row 8 )
+
+( rowsucc 1 2 ) 
+( rowsucc 2 3 ) 
+( rowsucc 3 4 ) 
+( rowsucc 4 5 ) 
+( rowsucc 5 6 ) 
+( rowsucc 6 7 ) 
+( rowsucc 7 8 ) 
+( rowsucc 8 1 ) 
+
+
+( col 1 )
+( col 2 )
+( col 3 )
+( col 4 )
+( col 5 )
+( col 6 )
+( col 7 )
+( col 8 )
+( col 9 )
+( col 10 )
+( col 11 )
+( col 12 )
+( col 13 )
+( col 14 )
+( col 15 )
+
+( succ 1 2 ) 
+( succ 2 3 ) 
+( succ 3 4 ) 
+( succ 4 5 ) 
+( succ 5 6 ) 
+( succ 6 7 ) 
+( succ 7 8 ) 
+( succ 8 9 ) 
+( succ 9 10 ) 
+( succ 10 11 ) 
+( succ 11 12 ) 
+( succ 12 13 ) 
+( succ 13 14 ) 
+( succ 14 15 ) 
+
+( endcol 15 )
+
+( init ( at red 2 1 ) )
+( init ( at blue 4 1 ) )
+( init ( at green 6 1 ) ) 
+( init ( at yellow 8 1 ) )
+( init ( player_alive ) )
+
+( init ( rock 2 3 ) )
+( init ( rock 4 3 ) )
+( init ( rock 6 3 ) )
+( init ( rock 8 3 ) )
+
+( init ( rock 1 13 ) )
+( init ( rock 3 13 ) )
+( init ( rock 5 13 ) )
+( init ( rock 7 13 ) )
+
+( frozen_index 1 )
+( frozen_index 2 )
+
+
+( <= ( block_static ?i ?j ) ( true ( rock ?i ?j ) ) )
+( <= ( block_player ?i ?j ) ( true ( at ?p ?i ?j ) ) )
+( <= ( block_adjacent ?i ?j ) ( block_player ?u ?j ) ( rowsucc ?i ?u ) )
+( <= ( block_adjacent ?i ?j ) ( block_player ?u ?j ) ( rowsucc ?u ?i ) )
+
+( <= ( forward_clear ?i ?j ) ( row ?i ) ( col ?j ) ( succ ?j ?v ) ( not ( block_static ?i ?v ) ) )
+
+( <= ( diagup_clear ?i ?j ) ( row ?i ) ( col ?j ) ( rowsucc ?u ?i ) ( succ ?j ?v ) 
+      ( not ( block_static ?u ?v ) ) ( not ( block_adjacent ?i ?j) ) )
+
+( <= ( diagdown_clear ?i ?j ) ( row ?i ) ( col ?j ) ( rowsucc ?i ?u ) ( succ ?j ?v ) 
+      ( not ( block_static ?u ?v ) ) ( not ( block_adjacent ?i ?j ) ) )
+
+( <= ( throttle_clear ?i ?j ) ( row ?i ) ( col ?j ) ( succ ?j ?v ) 
+      ( forward_clear ?i ?j ) ( forward_clear ?i ?v ) 
+      ( not ( block_adjacent ?i ?j ) ) ( not ( block_adjacent ?i ?v ) ) )
+
+
+( <= ( has_forward ?p ) ( role ?p ) ( true ( at ?p ?i ?j ) ) 
+      ( forward_clear ?i ?j ) ( not ( true ( frozen ?p 1 ) ) ) ( not ( true ( frozen ?p 2 ) ) ) )
+( <= ( has_diagup ?p ) ( role ?p ) ( true ( at ?p ?i ?j ) ) 
+      ( diagup_clear ?i ?j ) ( not ( true ( frozen ?p 1 ) ) ) ( not ( true ( frozen ?p 2 ) ) ) )
+( <= ( has_diagdown ?p ) ( role ?p ) ( true ( at ?p ?i ?j ) ) 
+      ( diagdown_clear ?i ?j ) ( not ( true ( frozen ?p 1 ) ) ) ( not ( true ( frozen ?p 2 ) ) ) ) 
+( <= ( has_throttle ?p ) ( role ?p ) ( true ( at ?p ?i ?j ) ) 
+      ( throttle_clear ?i ?j ) ( not ( true ( frozen ?p 1 ) ) ) ( not ( true ( frozen ?p 2 ) ) ) ) 
+( <= ( has_freeze ?p ?q ) ( role ?p ) ( role ?q ) ( not ( true ( freeze_used ?p ?q ) ) ) 
+      ( not ( true ( frozen ?p 1 ) ) ) ( not ( true ( frozen ?p 2 ) ) ) )
+ 
+( <= ( has_move ?p ) ( has_forward ?p ) )
+( <= ( has_move ?p ) ( has_diagup ?p ) )
+( <= ( has_move ?p ) ( has_diagdown ?p ) )
+( <= ( has_move ?p ) ( has_throttle ?p ) ) 
+( <= ( has_move ?p ) ( has_freeze ?p ?q ) )
+
+( <= ( legal ?p forward ) ( has_forward ?p ) )
+( <= ( legal ?p diagup ) ( has_diagup ?p ) )
+( <= ( legal ?p diagdown ) ( has_diagdown ?p ) )
+( <= ( legal ?p throttle ) ( has_throttle ?p ) )
+( <= ( legal ?p ( freeze ?q ) ) ( role ?p ) ( role ?q ) ( has_freeze ?p ?q ) )
+( <= ( legal ?p noop ) ( role ?p ) ( not ( has_move ?p ) ) )
+
+
+( <= ( next ( at ?p ?i ?j ) ) ( true ( at ?p ?i ?j ) ) ( does ?p noop ) )
+( <= ( next ( at ?p ?i ?j ) ) ( true ( at ?p ?i ?j ) ) ( does ?p ( freeze ?q ) ) )
+( <= ( next ( at ?p ?i ?v ) ) ( does ?p forward ) ( true ( at ?p ?i ?j ) ) ( succ ?j ?v ) )
+( <= ( next ( at ?p ?i ?m ) ) ( does ?p throttle ) ( true ( at ?p ?i ?j ) ) ( succ ?j ?v ) ( succ ?v ?m ) )
+( <= ( next ( just_throttled ?p ) ) ( does ?p throttle ) )
+( <= ( next ( frozen ?p 1) ) ( true ( just_throttled ?p ) ) ( true ( at ?p ?i ?j ) ) ( not ( forward_clear ?i ?j ) ) )
+( <= ( next ( at ?p ?u ?v ) ) ( does ?p diagup ) ( true ( at ?p ?i ?j ) ) ( rowsucc ?u ?i ) ( succ ?j ?v ) )
+( <= ( next ( at ?p ?u ?v ) ) ( does ?p diagdown ) ( true ( at ?p ?i ?j ) ) ( rowsucc ?i ?u ) ( succ ?j ?v ) )
+( <= ( next ( frozen ?q 2 ) ) ( role ?p ) ( role ?q ) ( does ?p ( freeze ?q ) ) )
+( <= ( next ( frozen ?q ?fin ) ) ( true ( frozen ?q ?fio ) ) ( succ ?fin ?fio ) )
+( <= ( next ( freeze_used ?p ?q ) ) ( role ?p ) ( does ?p ( freeze ?q ) ) )
+( <= ( next ( freeze_used ?p ?q ) ) ( true ( freeze_used ?p ?q ) ) )
+( <= ( next ( crashed ?p ) ) ( role ?p ) ( role ?q ) ( true ( at ?p ?i ?j ) ) ( true ( at ?q ?i ?j ) ) ( distinct ?p ?q ) )
+( <= ( next ( frozen ?p 1 ) ) ( true ( crashed ?p ) ) )
+( <= ( next ( player_alive ) ) ( role ?p ) ( not ( true ( crashed ?p ) ) ) )
+( <= ( next ( rock ?i ?j ) ) ( true ( rock ?i ?j ) ) )
+
+
+( <= ( goal ?p 100 ) ( endcol ?j ) ( true ( at ?p ?i ?j ) ) )
+( <= ( goal ?p 0 ) ( true ( at ?p ?i ?j ) ) ( not ( endcol ?j ) ) )
+
+
+( <= terminal ( endcol ?j ) ( true ( at ?p ?i ?j ) ) )
+( <= terminal ( not ( true ( player_alive ) ) ) )
+
+
+
+
+
+
+

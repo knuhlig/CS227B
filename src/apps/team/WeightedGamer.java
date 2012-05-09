@@ -24,7 +24,7 @@ public class WeightedGamer extends HeuristicGamer {
 
 		int playerMobilityScore, playerFocusScore, opponentMobilityScore, opponentFocusScore;
 
-		Map<Move, List<MachineState>> successors = getTransitions(state);
+		Map<Move, List<MachineState>> successors = getTransitions(state, false);
 		int numPossibleSuccessors = successors.size();
 
 		int numResultantStates = 0;
@@ -53,7 +53,7 @@ public class WeightedGamer extends HeuristicGamer {
 		sum /= numTrials;
 		
 		// Weights
-		double w1 = 0.2, w2 = 0.2, w3 = 0.2, w4 = 0.15, w5 = 1 - (w1 + w2+ w3 + w4);
+		double w1 = 0.2, w2 = 0.2, w3 = 0.2, w4 = 0.2, w5 = 1 - (w1 + w2+ w3 + w4);
 		return (int) (w1 * playerMobilityScore + w2 * playerFocusScore + w3
 				* opponentMobilityScore + w4 * opponentFocusScore + w5 * sum);
 
