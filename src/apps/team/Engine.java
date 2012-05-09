@@ -20,7 +20,7 @@ public class Engine extends StateMachineGamer {
 	// MONTE_CARLO_RATIO*X time doing monte carlo afterwards before we move
 	// on to the next state
 	private static final double MONTE_CARLO_RATIO = 1.0;
-	
+
 	private MachineStateCache stateCache;
 	private Random random = new Random();
 
@@ -48,26 +48,33 @@ public class Engine extends StateMachineGamer {
 		private List<GameNode> children;
 		// The children of this GameNode, ordered by the move that leads to them
 		private Map<Move, List<GameNode>> childrenByMove;
-		// The children of this 
-		// The terminal value of this GameNode, if it is a terminal state.
-		// -1 otherwise.
+		// Is this a terminal node?
+		private boolean terminal;
+		// If this is a terminal node, what is its value?
 		private int value;
 		// The sum of all depth charges performed starting at this node
 		private int monteCarloSum;
-		
+
 		GameNode(GameNode parent, Move move, int subMoveNum)
 		{
 			this.parent = parent;
 			this.move = move;
 			this.subMoveNum = subMoveNum;
-			this.value = -1;
+			this.value = 0;
 			this.monteCarloSum = 0;
+			this.terminal = false;
+			
+			MachineState myState = getMachineState();
+			this.terminal = Engine.this.stateCache.isTerminalState(myState);
+			if (terminal) {
+				this.value = Engine.this.stateCache.terminalValue(myState); 
+			}
 		}
-		
+
 		public GameNode getParent() {
 			return parent;
 		}
-		
+
 		public Move getMove() {
 			return move;
 		}
@@ -76,13 +83,23 @@ public class Engine extends StateMachineGamer {
 			return subMoveNum;
 		}
 		
+		public boolean isTerminal() {
+			return terminal;
+		}
+
 		public List<GameNode> getChildren() {
 			if (children != null) {
 				return children;
 			}
 			children = new ArrayList<GameNode>();
-			
+
 			MachineState state = getMachineState();
+
+			if (Engine.this.stateCache.isTerminalState(state)) {
+				this.value = Engine.this.stateCache.terminalValue(state);
+				return children;
+			}
+
 			Map<Move, List<MachineState>> transitions = stateCache.getTransitions(state);
 			for (Map.Entry<Move, List<MachineState>> entry : transitions.entrySet()) {
 				Move myMove = entry.getKey();
@@ -92,7 +109,7 @@ public class Engine extends StateMachineGamer {
 			}
 			return children;
 		}
-		
+
 		public Map<Move, List<GameNode>> getChildrenByMove() {
 			if (childrenByMove != null) {
 				return childrenByMove;
@@ -109,7 +126,7 @@ public class Engine extends StateMachineGamer {
 			}
 			return childrenByMove;
 		}
-		
+
 		public MachineState getMachineState() {
 			if (parent == null) {
 				return Engine.this.getCurrentState();
@@ -128,24 +145,31 @@ public class Engine extends StateMachineGamer {
 	public StateMachine getInitialStateMachine() {
 		return new ProverStateMachine();
 	}
-	
+
 	Move getRandomMove(MachineState state) {
 		Map<Move, List<MachineState>> transitions = stateCache.getTransitions(state);
 		List<Move> moves = new ArrayList<Move>(transitions.keySet());
 		return moves.get(random.nextInt(moves.size()));
 	}
-	
+
 	// Fill in all the information that heuristics might want to use when
 	// performing minimax.
 	void fillHeuristicState(GameNode node) {		
-		
+
 	}
-	
+
 	private Integer getScoreEstimate(GameNode searchTreeRoot, int numDepthCharges) {
 		// just use monte carlo for now
+		if (searchTreeRoot.terminal) {
+			System.out.println("Returning terminal value!");
+			return searchTreeRoot.value;
+		}
+		if (numDepthCharges == 0) {
+			return 0;
+		}
 		return (int)(((double)searchTreeRoot.monteCarloSum)/numDepthCharges);
 	}
-	
+
 	// Performs depth charges until we time out.
 	// Note: we don't return TIMEOUT_BUFFER millis before the timeout; we
 	// only stop doing depth charges once we've *actually* hit the timeout
@@ -175,18 +199,18 @@ public class Engine extends StateMachineGamer {
 		}
 		return numCharges;
 	}
-	
+
 	// Returns the best move at the given GameNode
 	// Returns null if we couldn't finish the minimax by timeout - TIMEOUT_BUFFER
 	Pair<Move, Integer> performMinimax(GameNode root, int depth, int numDepthCharges, long timeout) {
 		if (System.currentTimeMillis() + TIMEOUT_BUFFER >= timeout) {
 			return null;
 		}
-		
-		if (depth == 0) {
+
+		if (depth == 0 || root.isTerminal()) {
 			return new Pair<Move, Integer>(null, getScoreEstimate(root, numDepthCharges));
 		}
-		
+
 		// Not at the tree bottom
 		int bestScoreSoFar = -1;
 		Move bestMoveSoFar = null;
@@ -219,13 +243,12 @@ public class Engine extends StateMachineGamer {
 		if (System.currentTimeMillis() + TIMEOUT_BUFFER >= timeout) {
 			return true;
 		}
-		
-		MachineState state = node.getMachineState();
-		if (stateCache.isTerminalState(state)) {
-			node.value = stateCache.terminalValue(state);
+
+		if (node.isTerminal()) {
+			fringeNodes.add(node);
 			return false;
 		}
-		
+
 		if (depth == 0) {
 			fillHeuristicState(node);
 			fringeNodes.add(node);
@@ -239,38 +262,43 @@ public class Engine extends StateMachineGamer {
 		}
 		return false;
 	}
-	
+
 	@Override
 	public Move stateMachineSelectMove(long timeout) {
-		if (stateCache == null) {
-			stateCache = new MachineStateCache(getStateMachine(), getRole());
-		}
-		
-		// Start off with a random move so that we can at least do *something*
-		// if we run out of time.
-		Move bestSoFar = getRandomMove(getCurrentState());
-		// A place to start the search tree. It has no parents, hence the nulls.
-		GameNode searchTreeRoot = new GameNode(null, null, 0);
-		// Try to find the best move up to depth deep, until we run out of
-		// time.
-		for (int depth = 0; true; ++depth) {
-			System.out.println(">> Exploring to depth " + depth);
-			List<GameNode> fringeNodes = new ArrayList<GameNode>();
-			long expandStartTime = System.currentTimeMillis();
-			boolean timedOut = expandNodes(searchTreeRoot, depth, timeout, fringeNodes);
-			if (timedOut) {
-				break;
+		try {
+			if (stateCache == null) {
+				stateCache = new MachineStateCache(getStateMachine(), getRole());
 			}
-			long expandEndTime = System.currentTimeMillis();
-			long monteCarloTime = (long)(MONTE_CARLO_RATIO*(expandEndTime - expandStartTime));
-			long monteCarloTimeout = Math.min(timeout - TIMEOUT_BUFFER, expandEndTime + monteCarloTime);
-			int numDepthCharges = performMonteCarlo(fringeNodes, monteCarloTimeout);
-			Pair<Move, Integer> newBest = performMinimax(searchTreeRoot, depth, numDepthCharges, timeout);
-			if (newBest != null) {
-				bestSoFar = newBest.fst;
+
+			// Start off with a random move so that we can at least do *something*
+			// if we run out of time.
+			Move bestSoFar = getRandomMove(getCurrentState());
+			// A place to start the search tree. It has no parents, hence the nulls.
+			GameNode searchTreeRoot = new GameNode(null, null, 0);
+			// Try to find the best move up to depth deep, until we run out of
+			// time.
+			for (int depth = 0; true; ++depth) {
+				System.out.println(">> Exploring to depth " + depth);
+				List<GameNode> fringeNodes = new ArrayList<GameNode>();
+				long expandStartTime = System.currentTimeMillis();
+				boolean timedOut = expandNodes(searchTreeRoot, depth, timeout, fringeNodes);
+				if (timedOut) {
+					break;
+				}
+				long expandEndTime = System.currentTimeMillis();
+				long monteCarloTime = (long)(MONTE_CARLO_RATIO*(expandEndTime - expandStartTime));
+				long monteCarloTimeout = Math.min(timeout - TIMEOUT_BUFFER, expandEndTime + monteCarloTime);
+				int numDepthCharges = performMonteCarlo(fringeNodes, monteCarloTimeout);
+				Pair<Move, Integer> newBest = performMinimax(searchTreeRoot, depth, numDepthCharges, timeout);
+				if (newBest != null && newBest.fst != null) {
+					bestSoFar = newBest.fst;
+				}
 			}
+			return bestSoFar;
+		} catch (Exception e) {
+			e.printStackTrace();
+			return null;
 		}
-		return bestSoFar;
 	}
 
 	@Override
