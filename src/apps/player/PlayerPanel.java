@@ -5,9 +5,15 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowListener;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.swing.AbstractAction;
 import javax.swing.JButton;
@@ -29,7 +35,7 @@ import apps.player.match.MatchPanel;
 import apps.player.network.NetworkPanel;
 
 @SuppressWarnings("serial")
-public final class PlayerPanel extends JPanel
+public final class PlayerPanel extends JPanel implements WindowListener, MouseListener
 {
 	private static void createAndShowGUI(PlayerPanel playerPanel)
 	{
@@ -38,6 +44,7 @@ public final class PlayerPanel extends JPanel
 
 		frame.setPreferredSize(new Dimension(1024, 768));
 		frame.getContentPane().add(playerPanel);
+		frame.addWindowListener(playerPanel);
 
 		frame.pack();
 		frame.setVisible(true);
@@ -59,11 +66,16 @@ public final class PlayerPanel extends JPanel
 	}
 
 	private final JButton createButton;
+	private final JButton abortButton;
+	private final Map<JTabbedPane, GamePlayer> playerMap = new HashMap<JTabbedPane, GamePlayer>();
 	private final JTabbedPane playersTabbedPane;
 
 	private final JTextField portTextField;
+	private final JTextField regServerField;
 
 	private final JComboBox typeComboBox;
+	
+	private JTabbedPane currentPane = null;
 	
 	private Integer defaultPort = 9147;
 	
@@ -74,9 +86,12 @@ public final class PlayerPanel extends JPanel
 		super(new GridBagLayout());
 
 		portTextField = new JTextField(defaultPort.toString());
+		regServerField = new JTextField();
 		typeComboBox = new JComboBox();
-		createButton = new JButton(createButtonMethod());
+		createButton = new JButton(createButtonMethod(this));
+		abortButton = new JButton(abortButtonMethod(this));
 		playersTabbedPane = new JTabbedPane();
+		playersTabbedPane.addMouseListener(this);
 
 		portTextField.setColumns(15);
 
@@ -93,28 +108,31 @@ public final class PlayerPanel extends JPanel
 		}
 
 		JPanel managerPanel = new JPanel(new GridBagLayout());
+		
 		managerPanel.setBorder(new TitledBorder("Manager"));
 
 		managerPanel.add(new JLabel("Port:"), new GridBagConstraints(0, 0, 1, 1, 0.0, 0.0, GridBagConstraints.EAST, GridBagConstraints.NONE, new Insets(20, 5, 5, 5), 5, 5));
 		managerPanel.add(portTextField, new GridBagConstraints(1, 0, 1, 1, 1.0, 0.0, GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL, new Insets(20, 5, 5, 5), 5, 5));
 		managerPanel.add(new JLabel("Type:"), new GridBagConstraints(0, 1, 1, 1, 0.0, 0.0, GridBagConstraints.EAST, GridBagConstraints.NONE, new Insets(5, 5, 5, 5), 5, 5));
 		managerPanel.add(typeComboBox, new GridBagConstraints(1, 1, 1, 1, 1.0, 0.0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(5, 5, 5, 5), 5, 5));
-		managerPanel.add(createButton, new GridBagConstraints(1, 2, 1, 1, 1.0, 1.0, GridBagConstraints.SOUTH, GridBagConstraints.HORIZONTAL, new Insets(5, 5, 5, 5), 0, 0));
-
+		managerPanel.add(new JLabel("Reg Server:"), new GridBagConstraints(0, 2, 1, 1, 0.0, 0.0, GridBagConstraints.EAST, GridBagConstraints.NONE, new Insets(5, 5, 5, 5), 5, 5));
+		managerPanel.add(regServerField, new GridBagConstraints(1, 2, 1, 1, 1.0, 0.0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(5, 5, 5, 5), 5, 5));
+		managerPanel.add(createButton, new GridBagConstraints(1, 3, 1, 1, 1.0, 1.0, GridBagConstraints.SOUTH, GridBagConstraints.HORIZONTAL, new Insets(5, 5, 40, 5), 0, 0));
+		managerPanel.add(abortButton, new GridBagConstraints(1, 3, 1, 1, 1.0, 1.0, GridBagConstraints.SOUTH, GridBagConstraints.HORIZONTAL, new Insets(5, 5, 5, 5), 0, 0));
+		
 		JPanel playersPanel = new JPanel(new GridBagLayout());
 		playersPanel.setBorder(new TitledBorder("Players"));
-
+		
 		playersPanel.add(playersTabbedPane, new GridBagConstraints(0, 0, 1, 1, 1.0, 1.0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(5, 5, 5, 5), 5, 5));
 
 		this.add(managerPanel, new GridBagConstraints(0, 0, 1, 1, 0.0, 1.0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(5, 5, 5, 5), 5, 5));
 		this.add(playersPanel, new GridBagConstraints(1, 0, 1, 1, 1.0, 1.0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(5, 5, 5, 5), 5, 5));
 	}
 
-	private AbstractAction createButtonMethod()
+	private AbstractAction createButtonMethod(final PlayerPanel panel)
 	{
 		return new AbstractAction("Create")
 		{
-
 			public void actionPerformed(ActionEvent evt)
 			{
 				try
@@ -138,8 +156,19 @@ public final class PlayerPanel extends JPanel
 					gamer.addObserver(matchPanel);
 					gamer.addObserver(detailPanel);
 
+					// Registration server stuff
+					String addressString = panel.regServerField.getText(); 
+					String[] splitAddress = addressString.split(":");
+					String regHost = null;
+					int regPort = -1;
+					if (splitAddress.length > 1) {
+			            regHost = splitAddress[0];
+			            regPort = Integer.parseInt(splitAddress[1]);
+					}
+		            
 					GamePlayer player = new GamePlayer(port, gamer);
 					player.addObserver(networkPanel);
+					player.setRegistrationServer(regHost, regPort);
 					player.start();					
 
 					JTabbedPane tab = new JTabbedPane();
@@ -149,6 +178,9 @@ public final class PlayerPanel extends JPanel
 					tab.addTab("Detail", detailPanel);
 					playersTabbedPane.addTab(type + " (" + player.getGamerPort() + ")", tab);
 					playersTabbedPane.setSelectedIndex(playersTabbedPane.getTabCount()-1);
+				
+					panel.setCurrent(tab);
+					panel.addPlayer(tab, player);
 					
 					defaultPort++;
 					portTextField.setText(defaultPort.toString());
@@ -160,4 +192,73 @@ public final class PlayerPanel extends JPanel
 			}
 		};
 	}
+	
+	protected void addPlayer(JTabbedPane tab, GamePlayer player) {
+		this.playerMap.put(tab, player);
+	}
+
+	protected void setCurrent(JTabbedPane tab) {
+		this.currentPane = tab;
+	}
+
+	private AbstractAction abortButtonMethod(final PlayerPanel panel) {
+		return new AbstractAction("Abort")
+		{
+			public void actionPerformed(ActionEvent evt)
+			{
+				panel.abortCurrent();
+			}
+		};
+	}
+
+	protected void abortCurrent() {
+		GamePlayer player = playerMap.get(currentPane);
+		if (player != null) {
+			player.abortAll();
+		}
+	}
+	
+	// The following window methods are for the PlayerPanel application as a whole.
+	
+	@Override
+	public void windowActivated(WindowEvent arg0) {	}
+
+	@Override
+	public void windowClosed(WindowEvent arg0) { }
+
+	@Override
+	public void windowClosing(WindowEvent arg0) {
+		for (GamePlayer player : this.playerMap.values()) {
+			player.interrupt();
+		}
+	}
+
+	@Override
+	public void windowDeactivated(WindowEvent arg0) {}
+
+	@Override
+	public void windowDeiconified(WindowEvent arg0) {}
+
+	@Override
+	public void windowIconified(WindowEvent arg0) {}
+
+	@Override
+	public void windowOpened(WindowEvent arg0) {}
+
+	@Override
+	public void mouseClicked(MouseEvent arg0) {
+		this.currentPane = (JTabbedPane) this.playersTabbedPane.getSelectedComponent();
+	}
+
+	@Override
+	public void mouseEntered(MouseEvent arg0) {	}
+
+	@Override
+	public void mouseExited(MouseEvent arg0) {	}
+
+	@Override
+	public void mousePressed(MouseEvent arg0) {	}
+
+	@Override
+	public void mouseReleased(MouseEvent arg0) { }
 }

@@ -42,7 +42,6 @@ public class AbortRequestThread extends Thread {
 	@Override
 	public void run()
 	{
-		System.out.println("Running abort thread");
 		try
 		{
 		    InetAddress theHost = InetAddress.getByName(host);

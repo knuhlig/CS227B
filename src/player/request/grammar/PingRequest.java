@@ -15,11 +15,14 @@ public final class PingRequest extends Request
 	public String getMatchId() {
 		return null;
 	}
+	
+	static public String PING_SUCCESS = "available";
+	static public String PING_FAILURE = "busy";
 
 	@Override
 	public String process(long receptionTime)
 	{
-	    return (gamer.ping()) ? "available" : "busy";
+	    return (gamer.ping()) ? PING_SUCCESS : PING_FAILURE;
 	}
 
 	@Override

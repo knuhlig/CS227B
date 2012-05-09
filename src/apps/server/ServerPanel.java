@@ -6,11 +6,22 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.net.SocketException;
+import java.net.URL;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.swing.AbstractAction;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -24,6 +35,7 @@ import player.GamePlayer;
 import server.GameServer;
 import util.game.Game;
 import util.match.Match;
+import util.networking.NetworkUtils;
 import util.statemachine.Role;
 import util.statemachine.StateMachine;
 import util.statemachine.implementation.prover.ProverStateMachine;
@@ -32,11 +44,13 @@ import util.ui.NativeUI;
 import apps.server.error.ErrorPanel;
 import apps.server.history.HistoryPanel;
 import apps.server.publishing.PublishingPanel;
+import apps.server.registration.RegistrationServer;
 import apps.server.states.StatesPanel;
 import apps.server.visualization.VisualizationPanel;
 
 @SuppressWarnings("serial")
-public final class ServerPanel extends JPanel implements ActionListener
+public final class ServerPanel extends JPanel 
+	implements ActionListener, ItemListener
 {    
 	private static void createAndShowGUI(ServerPanel serverPanel)
 	{
@@ -50,7 +64,7 @@ public final class ServerPanel extends JPanel implements ActionListener
 		frame.setVisible(true);
 	}
 
-	public static void main(String[] args)
+	public static void main(String[] args) throws SocketException, UnknownHostException
 	{
 	    NativeUI.setNativeUI();
 	
@@ -70,21 +84,46 @@ public final class ServerPanel extends JPanel implements ActionListener
 	private final JPanel managerPanel;
 	private final JTabbedPane matchesTabbedPane;
 	private final JTextField playClockTextField;
+	private final JTextField regServerField;
+	private final JPanel playersPanel;
+	private final JTabbedPane leftHandSide;
 
 	private final List<JTextField> playerNameTextFields;
 	private final List<JLabel> roleLabels;
 	private final JButton runButton;
-
+	private final JButton refreshRegButton;
+	
 	private final JTextField startClockTextField;
 	private final GameSelector gameSelector;
+	
+	private final InetAddress defaultPlayerIP;
 
-	public ServerPanel()
+	private final List<JComboBox> playerComboBoxes;
+	private Map<String, URL> registeredPlayers;
+	
+	static private String manualConfigOption = "MANUAL_CONFIG";
+	
+	private JComboBox generatePlayerComboBox() {
+		JComboBox result = new JComboBox();
+
+		result.addItem(manualConfigOption);
+		for (String name : registeredPlayers.keySet()) {
+			result.addItem(name);
+		}
+		result.addItemListener(this);
+		
+		return result;
+	}
+	
+	public ServerPanel() throws SocketException, UnknownHostException
 	{
 		super(new GridBagLayout());
 		
 		runButton = new JButton(runButtonMethod(this));
+		refreshRegButton = new JButton(refreshRegButton(this));
 		startClockTextField = new JTextField("30");
 		playClockTextField = new JTextField("15");
+		regServerField = new JTextField("");
 		managerPanel = new JPanel(new GridBagLayout());
 		matchesTabbedPane = new JTabbedPane();
 
@@ -99,6 +138,15 @@ public final class ServerPanel extends JPanel implements ActionListener
 
 		gameSelector = new GameSelector();
 		
+		playerComboBoxes = new ArrayList<JComboBox>();
+		registeredPlayers = new HashMap<String, URL>();
+		
+		defaultPlayerIP = NetworkUtils.getALocalIPAddress();
+
+		this.refreshRegServer();
+		
+		playersPanel = new JPanel(new GridBagLayout());
+		
 		int nRowCount = 0;
 		managerPanel.setBorder(new TitledBorder("Manager"));
 		managerPanel.add(new JLabel("Repository:"), new GridBagConstraints(0, nRowCount, 1, 1, 0.0, 0.0, GridBagConstraints.EAST, GridBagConstraints.NONE, new Insets(5, 5, 5, 5), 5, 5));
@@ -111,17 +159,56 @@ public final class ServerPanel extends JPanel implements ActionListener
 		managerPanel.add(new JLabel("Play Clock:"), new GridBagConstraints(0, nRowCount, 1, 1, 0.0, 0.0, GridBagConstraints.EAST, GridBagConstraints.NONE, new Insets(5, 5, 5, 5), 5, 5));
 		managerPanel.add(playClockTextField, new GridBagConstraints(1, nRowCount++, 1, 1, 0.0, 0.0, GridBagConstraints.EAST, GridBagConstraints.HORIZONTAL, new Insets(5, 5, 5, 5), 5, 5));
 		managerPanel.add(new JSeparator(), new GridBagConstraints(0, nRowCount++, 2, 1, 0.0, 0.0, GridBagConstraints.EAST, GridBagConstraints.HORIZONTAL, new Insets(5, 5, 5, 5), 5, 5));
+		managerPanel.add(new JLabel("Reg Server:"), new GridBagConstraints(0, nRowCount, 1, 1, 0.0, 0.0, GridBagConstraints.EAST, GridBagConstraints.NONE, new Insets(5, 5, 5, 5), 5, 5));
+		managerPanel.add(regServerField, new GridBagConstraints(1, nRowCount++, 1, 1, 0.0, 0.0, GridBagConstraints.EAST, GridBagConstraints.HORIZONTAL, new Insets(5, 5, 5, 5), 5, 5));
+		managerPanel.add(refreshRegButton, new GridBagConstraints(1, nRowCount++, 2, 1, 0.0, 0.0, GridBagConstraints.EAST, GridBagConstraints.HORIZONTAL, new Insets(5, 5, 5, 5), 0, 0));
 		managerPanel.add(runButton, new GridBagConstraints(1, nRowCount, 1, 1, 0.0, 1.0, GridBagConstraints.SOUTH, GridBagConstraints.HORIZONTAL, new Insets(5, 5, 5, 5), 0, 0));
+		
+
+		leftHandSide = new JTabbedPane();
+		leftHandSide.addTab("Management", managerPanel);
+		leftHandSide.addTab("Players", playersPanel);
 
 		JPanel matchesPanel = new JPanel(new GridBagLayout());
 		matchesPanel.setBorder(new TitledBorder("Matches"));
 		matchesPanel.add(matchesTabbedPane, new GridBagConstraints(0, 0, 1, 1, 1.0, 1.0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(5, 5, 5, 5), 5, 5));
 
-		this.add(managerPanel, new GridBagConstraints(0, 0, 1, 1, 0.0, 1.0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(5, 5, 5, 5), 5, 5));
+		this.add(leftHandSide, new GridBagConstraints(0, 0, 1, 1, 0.0, 1.0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(5, 5, 5, 5), 5, 5));
 		this.add(matchesPanel, new GridBagConstraints(1, 0, 1, 1, 1.0, 1.0, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(5, 5, 5, 5), 5, 5));
-		
+
         gameSelector.getGameList().addActionListener(this);
         gameSelector.repopulateGameList();		
+	}
+
+	private AbstractAction refreshRegButton(final ServerPanel serverPanel) {
+		return new AbstractAction("Refresh") {
+			public void actionPerformed(ActionEvent evt) {
+				serverPanel.refreshRegServer();
+			}
+		};
+	}
+
+	protected void refreshRegServer() {
+		try {
+			String addressString = this.regServerField.getText(); 
+			String[] splitAddress = addressString.split(":");
+			if (splitAddress.length < 2) return;
+            String hostname = splitAddress[0];
+            int port = Integer.parseInt(splitAddress[1]);
+            
+			Socket socket = new Socket(hostname, port);
+			registeredPlayers = RegistrationServer.queryList(socket);
+			socket.close();
+		} catch (UnknownHostException e) {
+			System.out.println("Error connecting to registration server: host unknown");
+		} catch (IOException e) {
+			System.out.println("Error connecting to registration server");
+		}
+		
+		if (registeredPlayers.size() == 0) {
+			System.out.println("No registered players found ...");
+		}
+		refreshPlayerPanel();
 	}
 
 	private AbstractAction runButtonMethod(final ServerPanel serverPanel)
@@ -189,49 +276,79 @@ public final class ServerPanel extends JPanel implements ActionListener
 			}
 		};
 	}
+	
+	protected void refreshPlayerPanel() {
+		theGame = gameSelector.getSelectedGame();
+
+        for (int i = 0; i < roleLabels.size(); i++)
+        {
+            playersPanel.remove(roleLabels.get(i));
+            playersPanel.remove(hostportTextFields.get(i));
+            playersPanel.remove(playerNameTextFields.get(i));
+            playersPanel.remove(playerComboBoxes.get(i));
+        }
+
+        roleLabels.clear();
+        hostportTextFields.clear();
+        playerNameTextFields.clear();
+        playerComboBoxes.clear();
+
+        validate();
+        runButton.setEnabled(false);
+        if (theGame == null)
+            return;            
+
+        StateMachine stateMachine = new ProverStateMachine();
+        stateMachine.initialize(theGame.getRules());
+        List<Role> roles = stateMachine.getRoles();
+        
+        int newRowCount = 7;
+        for (int i = 0; i < roles.size(); i++) {
+            roleLabels.add(new JLabel(roles.get(i).getName().toString() + ":"));
+            hostportTextFields.add(new JTextField(defaultPlayerIP.getHostAddress() + ":" +(GamePlayer.DEFAULT_PLAYER_PORT + i)));
+            playerNameTextFields.add(new JTextField("defaultPlayerName"));
+            playerComboBoxes.add(generatePlayerComboBox());
+            
+            hostportTextFields.get(i).setColumns(15);
+            playerNameTextFields.get(i).setColumns(15);
+
+            playersPanel.add(roleLabels.get(i), new GridBagConstraints(0, newRowCount, 1, 1, 1.0, 0.0, GridBagConstraints.EAST, GridBagConstraints.NONE, new Insets(5, 5, 5, 5), 5, 5));
+            playersPanel.add(playerComboBoxes.get(i), new GridBagConstraints(1, newRowCount++, 1, 1, 0.0, 0.0, GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL, new Insets(5, 5, 5, 5), 5, 5));
+            playersPanel.add(hostportTextFields.get(i), new GridBagConstraints(1, newRowCount++, 1, 1, 0.0, 0.0, GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL, new Insets(5, 5, 5, 5), 5, 5));
+            playersPanel.add(playerNameTextFields.get(i),  new GridBagConstraints(1, newRowCount++, 1, 1, 0.0, 0.0, GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL, new Insets(5, 5, 5, 5), 5, 5));
+            
+        }
+        managerPanel.add(runButton, new GridBagConstraints(1, newRowCount, 1, 1, 0.0, 1.0, GridBagConstraints.SOUTH, GridBagConstraints.HORIZONTAL, new Insets(5, 5, 5, 5), 0, 0));
+
+        validate();
+        runButton.setEnabled(true);
+	}
 
     @Override
     public void actionPerformed(ActionEvent e) {
         if (e.getSource() == gameSelector.getGameList()) {
-            theGame = gameSelector.getSelectedGame();
-
-            for (int i = 0; i < roleLabels.size(); i++)
-            {
-                managerPanel.remove(roleLabels.get(i));
-                managerPanel.remove(hostportTextFields.get(i));
-                managerPanel.remove(playerNameTextFields.get(i));
-            }
-
-            roleLabels.clear();
-            hostportTextFields.clear();
-            playerNameTextFields.clear();
-
-            validate();
-            runButton.setEnabled(false);
-            if (theGame == null)
-                return;            
-
-            StateMachine stateMachine = new ProverStateMachine();
-            stateMachine.initialize(theGame.getRules());
-            List<Role> roles = stateMachine.getRoles();
-            
-            int newRowCount = 7;
-            for (int i = 0; i < roles.size(); i++) {
-                roleLabels.add(new JLabel(roles.get(i).getName().toString() + ":"));
-                hostportTextFields.add(new JTextField("127.0.0.1:" + (GamePlayer.DEFAULT_PLAYER_PORT + i)));
-                playerNameTextFields.add(new JTextField("defaultPlayerName"));
-
-                hostportTextFields.get(i).setColumns(15);
-                playerNameTextFields.get(i).setColumns(15);
-
-                managerPanel.add(roleLabels.get(i), new GridBagConstraints(0, newRowCount, 1, 1, 1.0, 0.0, GridBagConstraints.EAST, GridBagConstraints.NONE, new Insets(5, 5, 5, 5), 5, 5));
-                managerPanel.add(hostportTextFields.get(i), new GridBagConstraints(1, newRowCount++, 1, 1, 0.0, 0.0, GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL, new Insets(5, 5, 5, 5), 5, 5));
-                managerPanel.add(playerNameTextFields.get(i),  new GridBagConstraints(1, newRowCount++, 1, 1, 0.0, 0.0, GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL, new Insets(5, 5, 5, 5), 5, 5));
-            }
-            managerPanel.add(runButton, new GridBagConstraints(1, newRowCount, 1, 1, 0.0, 1.0, GridBagConstraints.SOUTH, GridBagConstraints.HORIZONTAL, new Insets(5, 5, 5, 5), 0, 0));
-
-            validate();
-            runButton.setEnabled(true);
-        }        
+            refreshPlayerPanel();
+        }
     }
+
+	@Override
+	public void itemStateChanged(ItemEvent arg0) {
+		for (int i = 0; i < playerComboBoxes.size(); i++) {
+    		JComboBox comboBox = playerComboBoxes.get(i);
+    		
+    		if (arg0.getSource() == comboBox) {
+    			String itemName = (String)arg0.getItem();
+    			JTextField host = hostportTextFields.get(i);
+    			JTextField playerName = playerNameTextFields.get(i);
+    			if (itemName.equals(manualConfigOption)) {
+    				host.setText("");
+    				playerName.setText("");
+    			} else {
+	    			URL curURL = this.registeredPlayers.get(itemName);
+	    			host.setText(curURL.getHost() + ":" + curURL.getPort());
+	    			playerName.setText(itemName);
+    			}
+    		}
+    	}
+	}
 }

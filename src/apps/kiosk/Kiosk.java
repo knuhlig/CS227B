@@ -182,7 +182,7 @@ public final class Kiosk extends JPanel implements ActionListener, ItemListener,
     private void setupHumanPlayer() {
     	try {
             theHumanGamer = new KioskGamer(theGUIPanel);
-            theHumanPlayer = new GamePlayer(DEFAULT_HUMAN_PORT, theHumanGamer);
+            theHumanPlayer = new GamePlayer("127.0.0.1", DEFAULT_HUMAN_PORT, theHumanGamer);
             theHumanPlayer.start();
         } catch(Exception e) {
             e.printStackTrace();
@@ -304,7 +304,7 @@ public final class Kiosk extends JPanel implements ActionListener, ItemListener,
                         try {
                             gamer = (Gamer) gamerClass.newInstance();
                         } catch(Exception ex) { throw new RuntimeException(ex); }
-                        theComputerPlayer = new GamePlayer(DEFAULT_COMPUTER_PORT, gamer);
+                        theComputerPlayer = new GamePlayer("127.0.0.1", DEFAULT_COMPUTER_PORT, gamer);
                         theComputerPlayer.start();
                         System.out.println("Kiosk has started a gamer named " + theComputerPlayer.getGamer().getName() + ".");                        
                     }

@@ -65,7 +65,7 @@ public abstract class SingleGameGamer extends Gamer implements Subject{
 		Match match = new Match(matchId, startClock, playClock, game);		
 		notifyObservers(new GamerNewMatchEvent(match, roleName));
     	
-		this.match = new Match(matchId, startClock, playClock, game);
+		this.match = match;
 		this.roleName = roleName;
 		
 		int startClockTimeMillis = match.getStartClock() * 1000;
@@ -161,6 +161,12 @@ public abstract class SingleGameGamer extends Gamer implements Subject{
 		return this.getMatch() == null;		
 	}
 	
+	public void abortAll() {
+		if (match != null) {
+			this.abort(this.match.getMatchId());
+		}
+	}
+	
 	protected boolean matchIdMatch(String matchId) {
 		if(getMatch() == null) return false;
 		if(!getMatch().getMatchId().equals(matchId)) return false;
@@ -224,4 +230,5 @@ public abstract class SingleGameGamer extends Gamer implements Subject{
 			observer.observe(event);
 		}
 	}
+
 }

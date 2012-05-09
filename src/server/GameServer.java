@@ -291,7 +291,7 @@ public final class GameServer extends Thread implements Subject
     @Override
     public void interrupt () {
     	if (this.aborting) {
-    		try {
+	    	try {
 				this.sendAbortRequests();
 			} catch (InterruptedException e) {
 				e.printStackTrace();

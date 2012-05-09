@@ -86,6 +86,7 @@ public class ConsolePlayer {
 			System.out.println("-l     lists the gamers available");
 			System.out.println("-p     specify the port number");
 			System.out.println("-g     specify the gamer");
+			System.out.println("-r     specify the registration server");
 			System.out.println();
 			break;
 		}
@@ -95,6 +96,7 @@ public class ConsolePlayer {
 		// Get arguments
 		List<String> portsRaw = getParameters(args, "-p");
 		List<String> gamersRaw = getParameters(args, "-g");
+		List<String> registrationRaw = getParameters(args, "-r");
 		
 		List<Integer> ports = new ArrayList<Integer>();
 		for (String portString : portsRaw) {
@@ -121,6 +123,19 @@ public class ConsolePlayer {
 			System.out.println("No gamers listed after -g option");
 		}
 		
+		// Parse registration server
+	   String regHost = null;
+       int regPort = -1;
+		
+		if (registrationRaw.size() > 0) {
+			String addressRaw = registrationRaw.get(0);
+			String[] splitAddress = addressRaw.split(":");
+			if (splitAddress.length > 1) {
+				regHost = splitAddress[0];
+				regPort = Integer.parseInt(splitAddress[1]);
+			}
+		}
+		
 		// Construct players
 		int nextPort = GamePlayer.DEFAULT_PLAYER_PORT;
 		for (int i = 0; i < gamersObjects.size(); i++) {
@@ -132,6 +147,7 @@ public class ConsolePlayer {
 			}
 			
 			GamePlayer newPlayer = new GamePlayer (curPort, gamersObjects.get(i));
+			newPlayer.setRegistrationServer(regHost, regPort);
 			newPlayer.start();
 			nextPort = curPort + 1;
 		}

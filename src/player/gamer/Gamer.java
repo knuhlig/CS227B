@@ -65,6 +65,6 @@ public abstract class Gamer
 
 	public abstract Match getMatch(String matchId);
 
-	public void abortAll() { }
+	public abstract void abortAll();
 	
 }
