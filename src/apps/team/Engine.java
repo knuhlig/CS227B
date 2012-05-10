@@ -10,7 +10,7 @@ import player.gamer.statemachine.StateMachineGamer;
 import util.statemachine.MachineState;
 import util.statemachine.Move;
 import util.statemachine.StateMachine;
-import util.statemachine.implementation.prover.ProverStateMachine;
+import util.statemachine.implementation.propnet.PropNetStateMachine;
 
 public class Engine extends StateMachineGamer {
 	// How much free time do we want to leave ourselves to do cleanup
@@ -142,7 +142,7 @@ public class Engine extends StateMachineGamer {
 
 	@Override
 	public StateMachine getInitialStateMachine() {
-		return new ProverStateMachine();
+		return new PropNetStateMachine();
 	}
 
 	Move getRandomMove(MachineState state) {
