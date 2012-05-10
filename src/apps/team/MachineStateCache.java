@@ -36,6 +36,7 @@ public class MachineStateCache
 			}
 			return transitions;
 		} catch (Exception e) {
+			e.printStackTrace();
 			throw new RuntimeException(e);
 		}
 	}
