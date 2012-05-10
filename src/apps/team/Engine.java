@@ -67,7 +67,7 @@ public class Engine extends StateMachineGamer {
 			MachineState myState = getMachineState();
 			this.terminal = Engine.this.stateCache.isTerminalState(myState);
 			if (terminal) {
-				this.value = Engine.this.stateCache.terminalValue(myState); 
+				this.value = Engine.this.stateCache.terminalValue(myState);
 			}
 		}
 
@@ -95,8 +95,7 @@ public class Engine extends StateMachineGamer {
 
 			MachineState state = getMachineState();
 
-			if (Engine.this.stateCache.isTerminalState(state)) {
-				this.value = Engine.this.stateCache.terminalValue(state);
+			if (isTerminal()) {
 				return children;
 			}
 
@@ -160,14 +159,16 @@ public class Engine extends StateMachineGamer {
 
 	private Integer getScoreEstimate(GameNode searchTreeRoot, int numDepthCharges) {
 		// just use monte carlo for now
-		if (searchTreeRoot.terminal) {
-			System.out.println("Returning terminal value!");
+		if (searchTreeRoot.isTerminal()) {
 			return searchTreeRoot.value;
 		}
+		return 50;
+		/*
 		if (numDepthCharges == 0) {
-			return 0;
+			return 1;
 		}
-		return (int)(((double)searchTreeRoot.monteCarloSum)/numDepthCharges);
+		return (int)(((double)searchTreeRoot.monteCarloSum)/numDepthCharges)-1;
+		*/
 	}
 
 	// Performs depth charges until we time out.
@@ -290,7 +291,7 @@ public class Engine extends StateMachineGamer {
 				long monteCarloTimeout = Math.min(timeout - TIMEOUT_BUFFER, expandEndTime + monteCarloTime);
 				int numDepthCharges = performMonteCarlo(fringeNodes, monteCarloTimeout);
 				Pair<Move, Integer> newBest = performMinimax(searchTreeRoot, depth, numDepthCharges, timeout);
-				if (newBest != null && newBest.fst != null) {
+				if (newBest != null) {
 					bestSoFar = newBest.fst;
 				}
 			}
