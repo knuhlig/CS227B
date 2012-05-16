@@ -10,8 +10,11 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import server.threads.PingRequestThread;
 import util.http.HttpReader;
@@ -36,6 +39,8 @@ public class RegistrationServer {
 	public static String SUCCESS_RESP = "success";
 	public static String INACCESSIBLE_RESP = "inaccessible";
 	public static String LIST_CMD = "list";
+	
+	private static Random rand = new Random();
 
 	class Forward extends Thread {
 		public final Socket playerSide;
@@ -78,11 +83,9 @@ public class RegistrationServer {
 					Socket connection = exposedSide.accept();
 					String in = HttpReader.readAsServer(connection);
 					if (!in.endsWith("\n")) in += "\n";
-					System.out.println("Writing to player " + in);
 					this.playerWriter.write(in);
 					this.playerWriter.flush();
 					String out = this.playerReader.readLine();
-					System.out.println("Read from player " + out);
 					if (out != null) HttpWriter.writeAsServer(connection, out);
 					connection.close();
 				} catch (IOException e) {
@@ -110,9 +113,13 @@ public class RegistrationServer {
 	}
 	
 	static public void main(String argv[]) throws IOException {
-		ServerSocket socket = new ServerSocket(DEFAULT_REG_PORT);
+		InetAddress address = NetworkUtils.getALocalIPAddress();
+		ServerSocket socket = new ServerSocket(DEFAULT_REG_PORT, 0, address);
 		
 		RegistrationServer regServer = new RegistrationServer();
+		System.out.println("Registration server started on " + 
+				socket.getInetAddress().getHostAddress() + ":"
+				+ socket.getLocalPort());
 		
 		while (true) {
 			Socket newConnection = socket.accept();
@@ -127,7 +134,6 @@ public class RegistrationServer {
 				continue;
 			}
 			String[] tokens = message.split("\\s+");
-			System.out.println("Recieved: " + message);
 			
 			boolean keepAlive = false;
 			if (tokens.length > 0) {
@@ -164,6 +170,9 @@ public class RegistrationServer {
 					keepAlive = true;
 					response = SUCCESS_RESP + "\n";
 				} else if (command.equals(LIST_CMD)) {
+					// Randomly verify that a player in the list is still alive
+					regServer.randomVerify();
+					
 					response = regServer.list();
 				}
 				
@@ -179,6 +188,16 @@ public class RegistrationServer {
 		}
 	}
 	
+	private void randomVerify() {
+		List<String> allKeys =new ArrayList<String>(registrations.keySet());
+		int randInt = rand.nextInt(allKeys.size());
+		String name = allKeys.get(randInt);
+		URL url = registrations.get(name);
+		if (!verifyPlayerAccessible(name, url.getHost(), url.getPort())) {
+			registrations.remove(name);
+		}
+	}
+
 	private String list() {
 		JSONObject jobject = new JSONObject(registrations);
 		return jobject.toString() + "\n";
@@ -204,8 +223,16 @@ public class RegistrationServer {
 		// Attempt to ping the player at the given URL
 		PingRequestThread pingThread = 
 				new PingRequestThread(host, playerPort, name);
-		pingThread.run();
-		return pingThread.result;
+		try {
+			pingThread.start();
+		} catch (Exception e) { }
+		try {
+			Thread.sleep(1000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		pingThread.interrupt();
+		return pingThread.result && !pingThread.connectionError;
 	}
 
 	static private void displayRegistrations(Map<String,URL> registrations) {
@@ -223,6 +250,8 @@ public class RegistrationServer {
 	static public String 
 	sendRegistration (Socket serverSocket, String playerName, String address, int port) 
 			throws IOException {
+		
+		playerName = playerName.replace(" ", "");
 		
 		String message = REGISTRATION_CMD + " " + playerName + " " + address + " " + port + "\n";
 		PrintWriter out = new PrintWriter(serverSocket.getOutputStream(), true);

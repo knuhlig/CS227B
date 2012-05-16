@@ -29,14 +29,13 @@ import util.observer.Subject;
 
 public final class GamePlayer extends Thread implements Subject
 {
-    private final int port;
     private final Gamer gamer;
     private ServerSocket listener;
     private InetAddress address;
     private final List<Observer> observers;
     private String instanceName;
-    private String regServerIP = RegistrationServer.DEFAULT_REG_IP;
-    private int regServerPort = RegistrationServer.DEFAULT_REG_PORT;
+    private String regServerIP = null;
+    private int regServerPort = -1;
 
 	private PlayerServerMode serverMode;
 	private boolean switchServerMode = false;
@@ -81,7 +80,6 @@ public final class GamePlayer extends Thread implements Subject
             }				
         }
         
-        this.port = port;
         this.gamer = gamer;
         
         if (namePostfix == null) {
@@ -110,7 +108,7 @@ public final class GamePlayer extends Thread implements Subject
 	}
 	
 	public final int getGamerPort() {
-	    return port;
+	    return serverMode.getPort();
 	}
 	
 	public final Gamer getGamer() {
@@ -176,8 +174,9 @@ public final class GamePlayer extends Thread implements Subject
 			}
 		};
 		
-		registrationThread.start();
-		
+		if (this.regServerIP != null) {
+			registrationThread.start();
+		}
 		
 		// Wait for GGP messages
 		System.out.println(gamer.getName() + " listening ...");
@@ -284,5 +283,9 @@ public final class GamePlayer extends Thread implements Subject
 				new PingRequestThread(this.listener.getInetAddress().getHostAddress(), 
 				this.listener.getLocalPort(), this.instanceName);
 		pingThread.start();
+	}
+
+	public String getGamerHost() {
+		return serverMode.getHostAddress();
 	}
 }

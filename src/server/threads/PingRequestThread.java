@@ -16,6 +16,7 @@ public class PingRequestThread extends Thread {
 	private final int port;
 	private final String playerName;
 	public boolean result;
+	public boolean connectionError;
 	
 	public PingRequestThread(String host, int port, 
 			String playerName)
@@ -38,13 +39,13 @@ public class PingRequestThread extends Thread {
 			
 			HttpWriter.writeAsClient(socket, theHost.getHostName(), request, playerName);
 			
-			String response = HttpReader.readAsClient(socket);
+			String response = HttpReader.readAsClient(socket, 1000);
 			if (PingRequest.PING_SUCCESS.equals(response)) result = true;
 		
 			socket.close();
 			
 		} catch (IOException e) {
-			e.printStackTrace();
+			connectionError = true;
 		}
 
 	}
