@@ -11,6 +11,7 @@ import util.statemachine.MachineState;
 import util.statemachine.Move;
 import util.statemachine.StateMachine;
 import util.statemachine.implementation.propnet.PropNetStateMachine;
+import util.statemachine.implementation.prover.ProverStateMachine;
 
 public class Engine extends StateMachineGamer {
 	// How much free time do we want to leave ourselves to do cleanup
@@ -19,7 +20,7 @@ public class Engine extends StateMachineGamer {
 	// If we spend X time expanding out the GameNode tree, then spend
 	// MONTE_CARLO_RATIO*X time doing monte carlo afterwards before we move
 	// on to the next state
-	private static final double MONTE_CARLO_RATIO = 1.0;
+	private static final double MONTE_CARLO_RATIO = 0.0;
 
 	private MachineStateCache stateCache;
 	private Random random = new Random();
@@ -261,9 +262,7 @@ public class Engine extends StateMachineGamer {
 	@Override
 	public Move stateMachineSelectMove(long timeout) {
 		try {
-			if (stateCache == null) {
-				stateCache = new MachineStateCache(getStateMachine(), getRole());
-			}
+
 
 			// Start off with a random move so that we can at least do *something*
 			// if we run out of time.
@@ -299,6 +298,7 @@ public class Engine extends StateMachineGamer {
 
 	@Override
 	public void stateMachineMetaGame(long timeout) {
+		stateCache = new MachineStateCache(getStateMachine(), getRole());
 	}
 
 	@Override

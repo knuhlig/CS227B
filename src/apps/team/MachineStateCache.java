@@ -16,6 +16,9 @@ public class MachineStateCache
 	private StateMachine stateMachine;
 	private Role role;
 
+	private int numLookups;
+	private int numHits;
+	
 	public MachineStateCache(StateMachine stateMachine, Role role) {
 		this.stateMachine = stateMachine;
 		this.role = role;
@@ -25,14 +28,22 @@ public class MachineStateCache
 	public void reset() {
 		terminalCache = new HashMap<MachineState, Integer>();
 		transitionCache = new HashMap<MachineState, Map<Move, List<MachineState>>>();
+		numLookups = 0;
+		numHits = 0;
 	}
 
 	public Map<Move, List<MachineState>> getTransitions(MachineState state)  {
+		numLookups++;
 		try {
 			Map<Move, List<MachineState>> transitions = transitionCache.get(state);
 			if (transitions == null) {
 				transitions = stateMachine.getNextStates(state, role);
 				transitionCache.put(state, transitions);
+			} else {
+				numHits++;
+			}
+			if (numLookups % 1024 == 1) {
+				System.out.println("Hit ratio is " + ((double)numHits)/numLookups);
 			}
 			return transitions;
 		} catch (Exception e) {
