@@ -10,7 +10,7 @@ import player.gamer.statemachine.StateMachineGamer;
 import util.statemachine.MachineState;
 import util.statemachine.Move;
 import util.statemachine.StateMachine;
-import util.statemachine.implementation.prover.ProverStateMachine;
+import util.statemachine.implementation.propnet.PropNetStateMachine;
 
 public class Engine extends StateMachineGamer {
 	// How much free time do we want to leave ourselves to do cleanup
@@ -142,7 +142,7 @@ public class Engine extends StateMachineGamer {
 
 	@Override
 	public StateMachine getInitialStateMachine() {
-		return new ProverStateMachine();
+		return new PropNetStateMachine();
 	}
 
 	Move getRandomMove(MachineState state) {
@@ -163,12 +163,6 @@ public class Engine extends StateMachineGamer {
 			return searchTreeRoot.value;
 		}
 		return 50;
-		/*
-		if (numDepthCharges == 0) {
-			return 1;
-		}
-		return (int)(((double)searchTreeRoot.monteCarloSum)/numDepthCharges)-1;
-		*/
 	}
 
 	// Performs depth charges until we time out.
@@ -278,7 +272,7 @@ public class Engine extends StateMachineGamer {
 			GameNode searchTreeRoot = new GameNode(null, null, 0);
 			// Try to find the best move up to depth deep, until we run out of
 			// time.
-			for (int depth = 0; true; ++depth) {
+			for (int depth = 1; true; ++depth) {
 				System.out.println(">> Exploring to depth " + depth);
 				List<GameNode> fringeNodes = new ArrayList<GameNode>();
 				long expandStartTime = System.currentTimeMillis();
@@ -291,9 +285,10 @@ public class Engine extends StateMachineGamer {
 				long monteCarloTimeout = Math.min(timeout - TIMEOUT_BUFFER, expandEndTime + monteCarloTime);
 				int numDepthCharges = performMonteCarlo(fringeNodes, monteCarloTimeout);
 				Pair<Move, Integer> newBest = performMinimax(searchTreeRoot, depth, numDepthCharges, timeout);
-				if (newBest != null) {
-					bestSoFar = newBest.fst;
+				if (newBest == null) {
+					break;
 				}
+				bestSoFar = newBest.fst;
 			}
 			return bestSoFar;
 		} catch (Exception e) {
@@ -304,7 +299,6 @@ public class Engine extends StateMachineGamer {
 
 	@Override
 	public void stateMachineMetaGame(long timeout) {
-
 	}
 
 	@Override
