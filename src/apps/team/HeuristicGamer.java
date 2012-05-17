@@ -5,6 +5,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import Jama.Matrix;
+
 import player.gamer.statemachine.StateMachineGamer;
 import util.gdl.grammar.Gdl;
 import util.statemachine.MachineState;
@@ -13,6 +15,7 @@ import util.statemachine.StateMachine;
 import util.statemachine.exceptions.GoalDefinitionException;
 import util.statemachine.exceptions.MoveDefinitionException;
 import util.statemachine.exceptions.TransitionDefinitionException;
+import util.statemachine.implementation.propnet.NativeMachineState;
 import util.statemachine.implementation.propnet.PropNetStateMachine;
 import util.statemachine.implementation.prover.ProverStateMachine;
 
@@ -46,8 +49,13 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 		// initialize
 		reset();
 		List<Gdl> rules = getMatch().getGame().getRules();
+		//for (Gdl rule: rules) {
+		//	System.out.println(rule.toString());
+		//}
+		//return new StateMachine1336632681534();
 		//return PropNetStateMachine.compileNative(rules);
 		return new PropNetStateMachine();
+		//return new Connect4Machine();
 		//return new ProverStateMachine();
 	}
 	
@@ -129,7 +137,6 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 	private Pair<Integer, Move> dls(MachineState state, int depth, int alpha, int beta) throws Exception {
 		// check periodically for a timeout
 		if (System.currentTimeMillis() + timeoutBuffer >= timeout) {
-			System.out.println("timing out: " + System.currentTimeMillis() + " getting close to " + timeout);
 			throw new RuntimeException("search timeout");
 		}
 		
@@ -137,7 +144,7 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 		
 		// exact state, cached
 		if (stateCache.containsKey(state)) {
-			return stateCache.get(state);
+			//return stateCache.get(state);
 		}
 		
 		// terminal state, uncached
@@ -162,7 +169,7 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 		
 		for (Move move: legalMoves.keySet()) {
 			int cur = dlsMin(legalMoves.get(move), depth - 1, alpha, beta);
-			if (cur >= alpha) {
+			if (cur > alpha) {
 				alpha = cur;
 				optMove = move;
 			}
@@ -170,10 +177,37 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 				break;
 			}
 		}
-		
 		return new Pair<Integer, Move>(alpha, optMove);
 	}
 	
+	private Move searchGameTree() throws MoveDefinitionException {
+		Pair<Integer, Move> opt = null;
+		try {
+			int depth = 0;
+			while (true) {
+				depthLimited = false;
+				depth++;
+				System.out.println(">> exploring to depth " + depth);
+				opt = dls(getCurrentState(), depth, GOAL_MIN, GOAL_MAX);
+				if (!depthLimited) {
+					System.out.println(">> explored full depth");
+					break;
+				}
+			}
+		} catch (Exception e) {
+			System.out.println(">> stopping: " + e.getMessage());
+		}
+		
+		if (opt != null && opt.snd != null) {
+			return opt.snd;
+		}
+		
+		// didn't evaluate any moves, shouldn't happen in practice
+		System.out.println(">> returning random move");
+		return getStateMachine().getRandomMove(getCurrentState(), getRole());
+	}
+	
+	/*
 	private int minSearch(List<MachineState> states, int depth) throws Exception {
 		int min = GOAL_MAX + 1;
 		for (MachineState state: states) {
@@ -228,38 +262,11 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 				optMove = move;
 			}
 		}
-		
 		stateCache.put(state, new Pair<Integer, Move>(optVal, optMove));
 		return stateCache.get(state);
 	}
 	
-	private Move searchGameTree() throws MoveDefinitionException {
-		Pair<Integer, Move> opt = null;
-		try {
-			int depth = 0;
-			while (true) {
-				depthLimited = false;
-				depth++;
-				System.out.println(">> exploring to depth " + depth);
-				opt = dls(getCurrentState(), depth, GOAL_MIN, GOAL_MAX);
-				if (!depthLimited) {
-					System.out.println(">> explored full depth");
-					break;
-				}
-			}
-		} catch (Exception e) {
-			System.out.println(">> stopping: " + e.getMessage());
-			e.printStackTrace();
-		}
-		
-		if (opt != null && opt.snd != null) {
-			return opt.snd;
-		}
-		
-		// didn't evaluate any moves, shouldn't happen in practice
-		System.out.println(">> returning random move");
-		return getStateMachine().getRandomMove(getCurrentState(), getRole());
-	}
+
 	
 	private void createEndGameBook() {
 		try {
@@ -282,6 +289,17 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 		}
 	}
 
+	private MachineState getRandomState() throws Exception {
+		List<MachineState> list = depthChargeFull(getCurrentState());
+		int randIdx = (int) (Math.random() * list.size());
+		return list.get(randIdx);
+	}
+	
+	private double sigmoid(double t) {
+		return 1 / (1 + Math.exp(-t));
+	}
+	*/
+	
 	@Override
 	public void stateMachineMetaGame(long timeout)
 			throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException {
@@ -289,12 +307,65 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 		
 		long curTime = System.currentTimeMillis();
 		long duration = timeout - curTime;
-		
-		this.timeout = curTime + duration / 2;
-		System.out.println("creating end game book");
-		//createEndGameBook();
-		
+
 		this.timeout = curTime + duration;
+		//this.timeout = curTime + duration / 2;
+		//System.out.println("creating end game book");
+		//createEndGameBook();
+		/*
+		try {
+			int N = 100;
+			int numTrials = 10;
+			Matrix heuristics = new Matrix(N, 4);
+			Matrix estimates = new Matrix(N, 1);
+			
+			for (int it = 0; it < N; it++) {
+				MachineState randState = getRandomState();
+				int playerMobilityScore, playerFocusScore, opponentMobilityScore, opponentFocusScore;
+
+				Map<Move, List<MachineState>> successors = getTransitions(randState, false);
+				int numPossibleSuccessors = successors.size();
+
+				int numResultantStates = 0;
+				for (List<MachineState> successorGroup : successors.values()) {
+					numResultantStates += successorGroup.size();
+				}
+
+				// Maximize Player Mobility
+				playerMobilityScore = (int) (100 * sigmoid(0.3 * numPossibleSuccessors));
+
+				// Maximize Player Focus
+				playerFocusScore = (int) (100 * sigmoid(-0.3 * numPossibleSuccessors));
+
+				// Maximize Opponent Mobility
+				opponentMobilityScore = (int) (100 * sigmoid(0.3 * numResultantStates));
+
+				// Maximize Opponent Focus
+				opponentFocusScore = (int) (100 * sigmoid(-0.3 * numResultantStates));
+
+				// Monte Carlo Heuristic
+				int sum = 0;
+				for (int i = 0; i < numTrials; i++) {
+					MachineState terminal = depthCharge(randState);
+					sum += getStateMachine().getGoal(terminal, getRole());
+				}
+				sum /= numTrials;
+
+				heuristics.set(it, 0, playerMobilityScore);
+				heuristics.set(it, 1, playerFocusScore);
+				heuristics.set(it, 2, opponentMobilityScore);
+				heuristics.set(it, 3, opponentFocusScore);
+				estimates.set(it, 0, sum);
+			}
+			
+			Matrix weights = heuristics.solve(estimates);
+			for (int i = 0; i < 4; i++) {
+				System.out.println("weight " + i + ": " + weights.get(i, 0));
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		*/
 		searchGameTree();
 		
 		System.out.println(">> done metagaming");
@@ -308,15 +379,9 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 	}
 
 	@Override
-	public void stateMachineStop() {
-		// TODO Auto-generated method stub
-		
-	}
+	public void stateMachineStop() {}
 
 	@Override
-	public void stateMachineAbort() {
-		// TODO Auto-generated method stub
-		
-	}
+	public void stateMachineAbort() {}
 
 }

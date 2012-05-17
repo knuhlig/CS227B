@@ -43,7 +43,7 @@ public class MachineStateCache
 				numHits++;
 			}
 			if (numLookups % 1024 == 1) {
-				System.out.println("Hit ratio is " + ((double)numHits)/numLookups);
+				//System.out.println("Hit ratio is " + ((double)numHits)/numLookups);
 			}
 			return transitions;
 		} catch (Exception e) {

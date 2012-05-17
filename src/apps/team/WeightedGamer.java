@@ -10,10 +10,10 @@ public class WeightedGamer extends HeuristicGamer {
 
 	@Override
 	public String getName() {
-		return "PGGGPPG Weighted";
+		return "PGGGPPG_weighted";
 	}
 
-	private int numTrials = 5;
+	private int numTrials = 50;
 
 	private double sigmoid(double t) {
 		return 1 / (1 + Math.exp(-t));
@@ -22,6 +22,7 @@ public class WeightedGamer extends HeuristicGamer {
 	@Override
 	public int getHeuristicValue(MachineState state) throws Exception {
 
+		/*
 		int playerMobilityScore, playerFocusScore, opponentMobilityScore, opponentFocusScore;
 
 		Map<Move, List<MachineState>> successors = getTransitions(state, false);
@@ -43,7 +44,7 @@ public class WeightedGamer extends HeuristicGamer {
 
 		// Maximize Opponent Focus
 		opponentFocusScore = (int) (100 * sigmoid(-0.3 * numResultantStates));
-
+		
 		// Monte Carlo Heuristic
 		int sum = 0;
 		for (int i = 0; i < numTrials; i++) {
@@ -54,8 +55,19 @@ public class WeightedGamer extends HeuristicGamer {
 		
 		// Weights
 		double w1 = 0.2, w2 = 0.2, w3 = 0.2, w4 = 0.2, w5 = 1 - (w1 + w2+ w3 + w4);
-		return (int) (w1 * playerMobilityScore + w2 * playerFocusScore + w3
+		int val = (int) (w1 * playerMobilityScore + w2 * playerFocusScore + w3
 				* opponentMobilityScore + w4 * opponentFocusScore + w5 * sum);
-
+		return val;
+		*/
+		int sum = 0;
+		for (int i = 0; i < numTrials; i++) {
+			MachineState terminal = depthCharge(state);
+			sum += getStateMachine().getGoal(terminal, getRole());
+		}
+		sum /= numTrials;
+		
+		
+		
+		return Math.max(1, Math.min(99, sum));
 	}
 }

@@ -35,6 +35,12 @@ public class RandomGamer extends Gamer {
 	}
 	
 	@Override
+	public void abortAll() {
+		// TODO Auto-generated method stub
+		
+	}
+	
+	@Override
 	public boolean start(String matchId, GdlProposition roleName, Game game, 
 		int startClock, int playClock, long receptionTime) throws MetaGamingException {
 		
