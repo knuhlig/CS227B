@@ -5,8 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import Jama.Matrix;
-
 import player.gamer.statemachine.StateMachineGamer;
 import util.gdl.grammar.Gdl;
 import util.statemachine.MachineState;
@@ -15,9 +13,7 @@ import util.statemachine.StateMachine;
 import util.statemachine.exceptions.GoalDefinitionException;
 import util.statemachine.exceptions.MoveDefinitionException;
 import util.statemachine.exceptions.TransitionDefinitionException;
-import util.statemachine.implementation.propnet.NativeMachineState;
 import util.statemachine.implementation.propnet.PropNetStateMachine;
-import util.statemachine.implementation.prover.ProverStateMachine;
 
 public abstract class HeuristicGamer extends StateMachineGamer {
 	

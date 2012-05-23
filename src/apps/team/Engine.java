@@ -143,7 +143,8 @@ public class Engine extends StateMachineGamer {
 
 	@Override
 	public StateMachine getInitialStateMachine() {
-		return new PropNetStateMachine();
+		//return new PropNetStateMachine();
+		return new ProverStateMachine();
 	}
 
 	Move getRandomMove(MachineState state) {
@@ -158,12 +159,18 @@ public class Engine extends StateMachineGamer {
 
 	}
 
-	private Integer getScoreEstimate(GameNode searchTreeRoot, int numDepthCharges) {
+	private int getScoreEstimate(GameNode searchTreeRoot, int numDepthCharges) {
 		// just use monte carlo for now
 		if (searchTreeRoot.isTerminal()) {
 			return searchTreeRoot.value;
 		}
-		return 50;
+		if (numDepthCharges == 0) {
+			return 1;
+		}
+		int value = (int)((double)searchTreeRoot.monteCarloSum)/numDepthCharges;
+		value = Math.min(value, 99);
+		value = Math.max(value, 1);
+		return value;
 	}
 
 	// Performs depth charges until we time out.

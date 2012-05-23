@@ -13,7 +13,7 @@ public class WeightedGamer extends HeuristicGamer {
 		return "PGGGPPG_weighted";
 	}
 
-	private int numTrials = 50;
+	private int numTrials = 15;
 
 	private double sigmoid(double t) {
 		return 1 / (1 + Math.exp(-t));
