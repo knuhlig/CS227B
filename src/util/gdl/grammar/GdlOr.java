@@ -22,6 +22,10 @@ public final class GdlOr extends GdlLiteral
 	{
 		return disjuncts.size();
 	}
+	
+	public List<GdlLiteral> getDisjuncts() {
+		return disjuncts;
+	}
 
 	@Override
 	public void getDependencies(Set<String> types) {

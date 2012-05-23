@@ -120,17 +120,20 @@ public abstract class HeuristicGamer extends StateMachineGamer {
         return chain;
 	}
 	
-	private int dlsMin(List<MachineState> states, int depth, int alpha, int beta) throws Exception {
+	private Score dlsMin(List<MachineState> states, int depth, Score alpha, Score beta) throws Exception {
 		for (MachineState state: states) {
-			beta = Math.min(beta, dls(state, depth, alpha, beta).fst);
-			if (beta <= alpha) {
+			Score s = dls(state, depth, alpha, beta).fst;
+			if (s.compareTo(beta) < 0) {
+				beta = s;
+			}
+			if (beta.compareTo(alpha) <= 0) {
 				break;
 			}
 		}
 		return beta;
 	}
 	
-	private Pair<Integer, Move> dls(MachineState state, int depth, int alpha, int beta) throws Exception {
+	private Pair<Score, Move> dls(MachineState state, int depth, Score alpha, Score beta) throws Exception {
 		// check periodically for a timeout
 		if (System.currentTimeMillis() + timeoutBuffer >= timeout) {
 			throw new RuntimeException("search timeout");
@@ -147,7 +150,7 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 		if (sm.isTerminal(state)) {
 			int value = sm.getGoal(state, getRole());
 			stateCache.put(state, new Pair<Integer, Move>(value, null));
-			return stateCache.get(state);
+			return new Pair<Score, Move>(new Score(value, -depth), null);
 		}
 		
 		// depth limit reached
@@ -156,7 +159,8 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 			if (!heuristicCache.containsKey(state)) {
 				heuristicCache.put(state, getHeuristicValue(state));
 			}
-			return new Pair<Integer, Move>(heuristicCache.get(state), null);
+			int value = heuristicCache.get(state);
+			return new Pair<Score, Move>(new Score(value, 1), null);
 		}
 	
 		// recurse: minimax
@@ -164,29 +168,36 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 		Move optMove = null;
 		
 		for (Move move: legalMoves.keySet()) {
-			int cur = dlsMin(legalMoves.get(move), depth - 1, alpha, beta);
-			if (cur > alpha) {
+			Score cur = dlsMin(legalMoves.get(move), depth - 1, alpha, beta);
+			if (cur.compareTo(alpha) > 0) {
 				alpha = cur;
 				optMove = move;
 			}
-			if (beta <= alpha) {
+			if (beta.compareTo(alpha) <= 0) {
 				break;
 			}
 		}
-		return new Pair<Integer, Move>(alpha, optMove);
+		return new Pair<Score, Move>(alpha, optMove);
 	}
 	
 	private Move searchGameTree() throws MoveDefinitionException {
-		Pair<Integer, Move> opt = null;
+		Pair<Score, Move> opt = null;
 		try {
 			int depth = 0;
 			while (true) {
 				depthLimited = false;
 				depth++;
 				System.out.println(">> exploring to depth " + depth);
-				opt = dls(getCurrentState(), depth, GOAL_MIN, GOAL_MAX);
+				Score alpha = new Score(GOAL_MIN, 1);
+				Score beta = new Score(GOAL_MAX, -1000);
+				opt = dls(getCurrentState(), depth, alpha, beta);
+				System.out.println(opt);
 				if (!depthLimited) {
 					System.out.println(">> explored full depth");
+					break;
+				}
+				if (opt.fst.getScore() == GOAL_MAX) {
+					System.out.println(">> found forced win");
 					break;
 				}
 			}

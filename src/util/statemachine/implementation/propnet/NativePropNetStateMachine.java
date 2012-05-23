@@ -29,7 +29,6 @@ public abstract class NativePropNetStateMachine extends StateMachine {
 	protected Map<String, Integer> moveMap;
 	protected Map<Integer, Move> moveRMap;
 	
-	protected boolean[] components;
 	protected int terminalIdx;
 	protected int initIdx;
 	
@@ -40,11 +39,12 @@ public abstract class NativePropNetStateMachine extends StateMachine {
 		moveRMap = new HashMap<Integer, Move>();
 	}
 	
-	public void clear() {
-		Arrays.fill(components, false);
-	}
 
 	public abstract void mark();
+	public abstract void clear();
+	public abstract void setState(List<Integer> state);
+	public abstract void setBit(int bitIdx);
+	public abstract boolean isSet(int idx);
 	public abstract int getGoal(int roleIdx);
 	public abstract NativeMachineState getStateFromBase();
 	public abstract Set<Integer> getLegalMoves(int roleIdx);
@@ -57,17 +57,15 @@ public abstract class NativePropNetStateMachine extends StateMachine {
 	public void setState(MachineState state, List<Move> moves) {
 		clear();
 		NativeMachineState ns = (NativeMachineState) state;
-		for (int idx: ns.getState()) {	
-			components[idx] = true;
-		}
+		setState(ns.getState());
+		
 		if (moves != null) {
-			
 			for (int i = 0; i < moves.size(); i++) {
 				Role role = roles.get(i);
 				Move move = moves.get(i);
 				String key = "( does " + role + " " + move.toString() + " )";
 				int idx = moveMap.get(key);
-				components[idx] = true;
+				setBit(idx);
 			}
 		}
 		mark();
@@ -77,7 +75,7 @@ public abstract class NativePropNetStateMachine extends StateMachine {
 	
 	public boolean isTerminal(MachineState state) {
 		setState(state);
-		return components[terminalIdx];
+		return isSet(terminalIdx);
 	}
 	
 	public void addRole(String name) {
@@ -96,7 +94,7 @@ public abstract class NativePropNetStateMachine extends StateMachine {
 	
 	public NativeMachineState getInitialState() {
 		clear();
-		components[0] = true;
+		setBit(initIdx);
 		mark();
 		updateBase();
 		NativeMachineState ns = getStateFromBase();

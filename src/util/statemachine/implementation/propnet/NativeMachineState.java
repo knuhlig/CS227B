@@ -1,6 +1,8 @@
 package util.statemachine.implementation.propnet;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import util.statemachine.MachineState;
@@ -8,17 +10,17 @@ import util.statemachine.MachineState;
 
 public class NativeMachineState extends MachineState {
 
-	private Set<Integer> state;
+	private List<Integer> state;
 	
 	public NativeMachineState() {
-		state = new HashSet<Integer>();
+		state = new ArrayList<Integer>();
 	}
 	
 	public void add(Integer idx) {
 		state.add(idx);
 	}
 	
-	public Set<Integer> getState() {
+	public List<Integer> getState() {
 		return state;
 	}
 	
@@ -32,6 +34,6 @@ public class NativeMachineState extends MachineState {
 	public boolean equals(Object o) {
 		if (this == o) return true;
 		if (!(o instanceof NativeMachineState)) return false;
-		return state.equals((NativeMachineState)o);
+		return state.equals(((NativeMachineState)o).state);
 	}
 }

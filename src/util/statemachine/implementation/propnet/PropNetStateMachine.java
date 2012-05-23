@@ -8,6 +8,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import apps.team.game.GameLoader;
+
+import util.game.Game;
 import util.gdl.grammar.Gdl;
 import util.gdl.grammar.GdlConstant;
 import util.gdl.grammar.GdlRelation;
@@ -60,6 +63,7 @@ public class PropNetStateMachine extends StateMachine {
 		roles = propNet.getRoles();
 		componentOrdering = new ArrayList<Component>();
 		ordering = getOrdering(componentOrdering);
+		System.out.println(ordering);
 	}
 
 	public NativePropNetStateMachine compile() {
@@ -216,7 +220,6 @@ public class PropNetStateMachine extends StateMachine {
 			marked.add(baseProps.get(term));
 			addOutputs(baseProps.get(term), fringe);
 		}
-
 		// initial
 		marked.add(propNet.getInitProposition());
 		addOutputs(propNet.getInitProposition(), fringe);

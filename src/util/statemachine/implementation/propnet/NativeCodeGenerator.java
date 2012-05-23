@@ -3,6 +3,7 @@ package util.statemachine.implementation.propnet;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +25,8 @@ import util.statemachine.MachineState;
 import util.statemachine.Role;
 
 public class NativeCodeGenerator {
+	
+	private static final int INT_BITS = 32;
 
 	private PropNet propNet;
 	private List<Component> order;
@@ -32,7 +35,10 @@ public class NativeCodeGenerator {
 	private String className;
 	private String fileName;
 	private BufferedWriter out;
-
+	
+	
+	private int numInts;
+	private List<Integer> stateIdx = new ArrayList<Integer>();
 	private Map<Component, Integer> translation = new HashMap<Component, Integer>();
 	
 	public NativeCodeGenerator(PropNet propNet, List<Role> roles, List<Component> order) {
@@ -96,6 +102,7 @@ public class NativeCodeGenerator {
 	private void generateSourceFile() throws Exception {
 		out = new BufferedWriter(new FileWriter(fileName));
 		generateTranslation();
+		numInts = (int) Math.ceil(1.0 * translation.size() / INT_BITS);
 		writeLine(0, "package util.statemachine.implementation.propnet.gen;");
 		writeLine(0, "");
 		writeLine(0, "import util.statemachine.implementation.propnet.NativePropNetStateMachine;");
@@ -103,33 +110,79 @@ public class NativeCodeGenerator {
 		writeLine(0, "import java.util.*;");
 		writeLine(0, "");
 		writeLine(0, "public class " + className + " extends NativePropNetStateMachine {");
+		writeInstanceVars();
 		writeConstructor();
 		writeUpdateMethod();
 		writeGoalMethod();
 		writeMarkMethod();
 		writeStateMethod();
+		writeSetMethod();
+		writeSetBitMethod();
+		writeIsSetMethod();
 		writeLegalMethod();
+		writeClearMethod();
 		writeLine(0, "}");
 		out.close();
+	}
+	
+	private void writeIsSetMethod() {
+		writeLine(1, "public boolean isSet(int idx) {");
+		writeLine(2, "int offset = idx % "+INT_BITS+";");
+		writeLine(2, "switch (idx / "+INT_BITS+") {");
+		for (int i = 0; i < numInts; i++) {
+			writeLine(2, "case " + i + ":");
+			writeLine(3, "return ("+getDataBlock(i) + " & (1 << offset)) != 0;");
+		}
+		writeLine(2, "}");
+		writeLine(2, "return false;");
+		writeLine(1, "}");
+	}
+	
+	private void writeSetMethod() {
+		writeLine(1, "public void setState(List<Integer> state) {");
+		for (int i = 0; i < stateIdx.size(); i++) {
+			writeLine(2, getDataBlock(stateIdx.get(i)) + " = state.get("+i+");");
+		}
+		writeLine(1, "}");
+	}
+	
+	private void writeSetBitMethod() {
+		writeLine(1, "public void setBit(int idx) {");
+		writeLine(2, "int offset = idx % "+INT_BITS+";");
+		writeLine(2, "switch (idx / "+INT_BITS+") {");
+		for (int i = 0; i < numInts; i++) {
+			writeLine(2, "case " + i + ":");
+			writeLine(3, getDataBlock(i) + " |= 1 << offset;");
+			writeLine(3, "break;");
+		}
+		writeLine(2, "}");
+		writeLine(1, "}");
+	}
+	
+	private void writeInstanceVars() {
+		for (int i = 0; i < numInts; i++) {
+			writeLine(1, "private int "+getDataBlock(i)+";");
+		}
 	}
 	
 	private void writeMarkMethod() {
 		writeLine(1, "public void mark() {");
 		for (Component c: order) {
-			writeLine(2, getComponentVar(c) + " = " + getRValue(c) + ";");
+			writeLine(2, "if ("+getRValue(c)+") setBit("+translation.get(c)+");");
 		}
 		writeLine(1, "}");
 	}
 	
-	private String getComponentVar(Component c) {
-		return "components[" + translation.get(c) + "]";
+	private String getDataBlock(int num) {
+		return "data" + num;
 	}
 	
 
 	private void writeConstructor() {
 		writeLine(1, "public " + className + "() {");
 		writeLine(2, "super();");
-		writeLine(2, "components = new boolean[" + translation.size() + "];");
+		
+		//writeLine(2, "components = new boolean[" + translation.size() + "];");
 		writeLine(2, "terminalIdx = " + translation.get(propNet.getTerminalProposition()) + ";");
 		writeLine(2, "initIdx = " + translation.get(propNet.getInitProposition()) + ";");
 		int count = 0;
@@ -146,7 +199,15 @@ public class NativeCodeGenerator {
 	private void writeUpdateMethod() {
 		writeLine(1, "public void updateBase() {");
 		for (Proposition p: propNet.getBasePropositions().values()) {
-			writeLine(2, getComponentVar(p) + " = " + getComponentVar(p.getSingleInput()) + ";");
+			writeLine(2, "if ("+getRValue(p)+") setBit("+translation.get(p)+");");
+		}
+		writeLine(1, "}");
+	}
+	
+	private void writeClearMethod() {
+		writeLine(1, "public void clear() {");
+		for (int i = 0; i < numInts; i++) {
+			writeLine(2, getDataBlock(i) + " = 0;");
 		}
 		writeLine(1, "}");
 	}
@@ -158,7 +219,7 @@ public class NativeCodeGenerator {
 		for (Role role: roles) {
 			writeLine(2, "case " + count + ":");
 			for (Proposition p: propNet.getGoalPropositions().get(role)) {
-				writeLine(3, "if (" + getComponentVar(p) + ") return " + getGoalValue(p) + ";");
+				writeLine(3, "if (isSet("+translation.get(p)+")) return " + getGoalValue(p) + ";");
 			}
 			writeLine(3, "break;");
 			count++;
@@ -176,7 +237,7 @@ public class NativeCodeGenerator {
 		for (Role role: roles) {
 			writeLine(2, "case " + count + ":");
 			for (Proposition p: propNet.getLegalPropositions().get(role)) {
-				writeLine(3, "if ("+getComponentVar(p)+") moves.add("+translation.get(p)+");");
+				writeLine(3, "if (isSet("+translation.get(p)+")) moves.add("+translation.get(p)+");");
 			}
 			writeLine(3, "break;");
 			count++;
@@ -189,9 +250,20 @@ public class NativeCodeGenerator {
 	private void writeStateMethod() {
 		writeLine(1, "public NativeMachineState getStateFromBase() {");
 		writeLine(2, "NativeMachineState state = new NativeMachineState();");
-		for (Proposition bp: propNet.getBasePropositions().values()) {
-			int idx = translation.get(bp);
-			writeLine(2, "if (components["+idx+"]) state.add("+idx+");");
+		for (int i = 0; i < numInts; i++) {
+			int mask = 0;
+			for (Proposition p: propNet.getBasePropositions().values()) {
+				int idx = translation.get(p);
+				int num = idx / INT_BITS;
+				int offset = idx % INT_BITS;
+				if (num == i) {
+					mask |= 1 << offset;
+				}
+			}
+			if (mask != 0) {
+				writeLine(2, "state.add("+getDataBlock(i)+" & " + mask + ");");
+				stateIdx.add(i);
+			}
 		}
 		writeLine(2, "return state;");
 		writeLine(1, "}");
@@ -200,27 +272,33 @@ public class NativeCodeGenerator {
 	
 	private String getRValue(Component c) {
 		StringBuilder b = new StringBuilder();
+		b.append("(");
 		if (c instanceof Proposition || c instanceof Transition) {
-			b.append(getComponentVar(c.getSingleInput()));
+			b.append("isSet("+translation.get(c.getSingleInput())+")");
 		} else if (c instanceof And) {
 			int count = 0;
 			for (Component input: c.getInputs()) {
 				if (count > 0) b.append(" && ");
-				b.append(getComponentVar(input));
+				b.append(getRValue(input));
 				count++;
 			}
 		} else if (c instanceof Or) {
 			int count = 0;
 			for (Component input: c.getInputs()) {
 				if (count > 0) b.append(" || ");
-				b.append(getComponentVar(input));
+				b.append(getRValue(input));
 				count++;
 			}
 		} else if (c instanceof Not) {
-			b.append("!" + getComponentVar(c.getSingleInput()));
+			b.append("!" + getRValue(c.getSingleInput()));
 		} else if (c instanceof Constant) {
-			b.append(c.getValue() + "");
+			if (c.getValue()) {
+				b.append("true");
+			} else {
+				b.append("false");
+			}
 		}
+		b.append(")");
 		return b.toString();
 	}
 	
