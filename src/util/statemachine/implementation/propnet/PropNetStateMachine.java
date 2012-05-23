@@ -19,6 +19,7 @@ import util.gdl.grammar.GdlTerm;
 import util.propnet.architecture.Component;
 import util.propnet.architecture.PropNet;
 import util.propnet.architecture.components.Constant;
+import util.propnet.architecture.components.Or;
 import util.propnet.architecture.components.Proposition;
 import util.propnet.factory.OptimizingPropNetFactory;
 import util.statemachine.MachineState;
@@ -76,6 +77,28 @@ public class PropNetStateMachine extends StateMachine {
 			}
 		}
 		return machine;
+	}
+	
+	public PropNetStateMachine getFactored()
+	{
+		Proposition terminal = propNet.getTerminalProposition();
+		Component termCond = terminal.getSingleInput();
+		if (termCond instanceof Or) {
+			Or or = (Or) termCond;
+			Set<Component> inputs = or.getInputs();
+			Map<Role, Set<Proposition>> goalsByRole = propNet.getGoalPropositions();
+			Set<Proposition> goals = goalsByRole.get(roles.get(0));
+			
+			for (Proposition goal : goals) {
+				Component input = goal.getSingleInput();
+				if (input instanceof Or) {
+					Or goalOr = (Or) input;
+					Set<Component> goalInputs = goalOr.getInputs();
+					
+				}
+			}
+		}
+		return null;
 	}
 
 	/**

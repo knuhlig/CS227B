@@ -143,8 +143,7 @@ public class Engine extends StateMachineGamer {
 
 	@Override
 	public StateMachine getInitialStateMachine() {
-		//return new PropNetStateMachine();
-		return new ProverStateMachine();
+		return new PropNetStateMachine();
 	}
 
 	Move getRandomMove(MachineState state) {
