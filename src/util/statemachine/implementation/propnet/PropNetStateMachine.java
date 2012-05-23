@@ -79,7 +79,7 @@ public class PropNetStateMachine extends StateMachine {
 		return machine;
 	}
 	
-	public PropNetStateMachine getFactored()
+	public void factor(Role role)
 	{
 		Proposition terminal = propNet.getTerminalProposition();
 		Component termCond = terminal.getSingleInput();
@@ -87,18 +87,22 @@ public class PropNetStateMachine extends StateMachine {
 			Or or = (Or) termCond;
 			Set<Component> inputs = or.getInputs();
 			Map<Role, Set<Proposition>> goalsByRole = propNet.getGoalPropositions();
-			Set<Proposition> goals = goalsByRole.get(roles.get(0));
+			Set<Proposition> goals = goalsByRole.get(role);
 			
+			Component target = null;
 			for (Proposition goal : goals) {
 				Component input = goal.getSingleInput();
 				if (input instanceof Or) {
 					Or goalOr = (Or) input;
-					Set<Component> goalInputs = goalOr.getInputs();
-					
+					target = goalOr.getInputs().iterator().next();
+					goalOr.removeAllInputs();
+					or.removeAllInputs();
+					goalOr.addInput(target);
+					or.addInput(target);
+					return;
 				}
-			}
+			}			
 		}
-		return null;
 	}
 
 	/**
