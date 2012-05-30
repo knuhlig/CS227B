@@ -13,7 +13,7 @@ public class WeightedGamer extends HeuristicGamer {
 		return "PGGGPPG_weighted";
 	}
 
-	private int numTrials = 1;
+	private int numTrials = 5;
 
 	private double sigmoid(double t) {
 		return 1 / (1 + Math.exp(-t));
@@ -59,6 +59,7 @@ public class WeightedGamer extends HeuristicGamer {
 				* opponentMobilityScore + w4 * opponentFocusScore + w5 * sum);
 		return val;
 		*/
+		
 		int sum = 0;
 		for (int i = 0; i < numTrials; i++) {
 			MachineState terminal = depthCharge(state);

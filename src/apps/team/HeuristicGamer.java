@@ -188,8 +188,8 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 				depthLimited = false;
 				depth++;
 				System.out.println(">> exploring to depth " + depth);
-				Score alpha = new Score(GOAL_MIN, 1);
-				Score beta = new Score(GOAL_MAX, -1000);
+				Score alpha = new Score(GOAL_MIN - 1, 1);
+				Score beta = new Score(GOAL_MAX + 1, -1000);
 				opt = dls(getCurrentState(), depth, alpha, beta);
 				System.out.println(opt);
 				if (!depthLimited) {

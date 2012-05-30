@@ -34,10 +34,11 @@ public class Score implements Comparable<Score> {
 	@Override
 	public int compareTo(Score s) {
 		int res = score - s.score;
-		if (res != 0) {
+		return res;
+		/*if (res != 0) {
 			return res;
 		}
-		return s.depth - depth;
+		return s.depth - depth;*/
 	}
 	
 	@Override
