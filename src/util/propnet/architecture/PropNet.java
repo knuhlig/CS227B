@@ -67,34 +67,34 @@ import util.statemachine.Role;
 public final class PropNet
 {
 	/** References to every component in the PropNet. */
-	private final Set<Component> components;
+	public final Set<Component> components;
 	
 	/** References to every Proposition in the PropNet. */
-	private final Set<Proposition> propositions;
+	public final Set<Proposition> propositions;
 	
 	/** References to every BaseProposition in the PropNet, indexed by name. */
-	private final Map<GdlTerm, Proposition> basePropositions;
+	public final Map<GdlTerm, Proposition> basePropositions;
 	
 	/** References to every InputProposition in the PropNet, indexed by name. */
-	private final Map<GdlTerm, Proposition> inputPropositions;
+	public final Map<GdlTerm, Proposition> inputPropositions;
 	
 	/** References to every LegalProposition in the PropNet, indexed by role. */
-	private final Map<Role, Set<Proposition>> legalPropositions;
+	public final Map<Role, Set<Proposition>> legalPropositions;
 	
 	/** References to every GoalProposition in the PropNet, indexed by role. */
-	private final Map<Role, Set<Proposition>> goalPropositions;
+	public final Map<Role, Set<Proposition>> goalPropositions;
 	
 	/** A reference to the single, unique, InitProposition. */
-	private final Proposition initProposition;
+	public final Proposition initProposition;
 	
 	/** A reference to the single, unique, TerminalProposition. */
-	private final Proposition terminalProposition;
+	public final Proposition terminalProposition;
 	
 	/** A helper mapping between input/legal propositions. */
-	private final Map<Proposition, Proposition> legalInputMap;
+	public final Map<Proposition, Proposition> legalInputMap;
 	
 	/** A helper list of all of the roles. */
-	private final List<Role> roles;
+	public final List<Role> roles;
 	
 	public void addComponent(Component c)
 	{
@@ -134,7 +134,7 @@ public final class PropNet
 		return legalInputMap;
 	}
 
-	private Map<Proposition, Proposition> makeLegalInputMap() {
+	public Map<Proposition, Proposition> makeLegalInputMap() {
 		Map<Proposition, Proposition> legalInputMap = new HashMap<Proposition, Proposition>();
 		// Create a mapping from Body->Input.
 		Map<List<GdlTerm>, Proposition> inputPropsByBody = new HashMap<List<GdlTerm>, Proposition>();
@@ -289,7 +289,7 @@ public final class PropNet
 	 * 
 	 * @return An index over the BasePropositions in the PropNet.
 	 */
-	private Map<GdlTerm, Proposition> recordBasePropositions()
+	public Map<GdlTerm, Proposition> recordBasePropositions()
 	{
 		Map<GdlTerm, Proposition> basePropositions = new HashMap<GdlTerm, Proposition>();
 		for (Proposition proposition : propositions) {
@@ -316,7 +316,7 @@ public final class PropNet
 	 * 
 	 * @return An index over the GoalPropositions in the PropNet.
 	 */
-	private Map<Role, Set<Proposition>> recordGoalPropositions()
+	public Map<Role, Set<Proposition>> recordGoalPropositions()
 	{
 		Map<Role, Set<Proposition>> goalPropositions = new HashMap<Role, Set<Proposition>>();
 		for (Proposition proposition : propositions)
@@ -344,7 +344,7 @@ public final class PropNet
 	 * 
 	 * @return A reference to the single, unique, InitProposition.
 	 */
-	private Proposition recordInitProposition()
+	public Proposition recordInitProposition()
 	{
 		for (Proposition proposition : propositions)
 		{
@@ -365,7 +365,7 @@ public final class PropNet
 	 * 
 	 * @return An index over the InputPropositions in the PropNet.
 	 */
-	private Map<GdlTerm, Proposition> recordInputPropositions()
+	public Map<GdlTerm, Proposition> recordInputPropositions()
 	{
 		Map<GdlTerm, Proposition> inputPropositions = new HashMap<GdlTerm, Proposition>();
 		for (Proposition proposition : propositions)
@@ -388,7 +388,7 @@ public final class PropNet
 	 * 
 	 * @return An index over the LegalPropositions in the PropNet.
 	 */
-	private Map<Role, Set<Proposition>> recordLegalPropositions()
+	public Map<Role, Set<Proposition>> recordLegalPropositions()
 	{
 		Map<Role, Set<Proposition>> legalPropositions = new HashMap<Role, Set<Proposition>>();
 		for (Proposition proposition : propositions)
@@ -417,7 +417,7 @@ public final class PropNet
 	 * 
 	 * @return An index over Propositions in the PropNet.
 	 */
-	private Set<Proposition> recordPropositions()
+	public Set<Proposition> recordPropositions()
 	{
 		Set<Proposition> propositions = new HashSet<Proposition>();
 		for (Component component : components)
@@ -434,7 +434,7 @@ public final class PropNet
 	 * 
 	 * @return A reference to the single, unqiue, TerminalProposition.
 	 */
-	private Proposition recordTerminalProposition()
+	public Proposition recordTerminalProposition()
 	{
 		for ( Proposition proposition : propositions )
 		{
