@@ -28,7 +28,7 @@ import util.propnet.architecture.components.Transition;
 import util.statemachine.MachineState;
 import util.statemachine.Role;
 
-public class NativeCodeGenerator {
+public class JavaCodeGenerator {
 	
 	private static final int BLOCK_BITS = 32;
 
@@ -45,7 +45,7 @@ public class NativeCodeGenerator {
 	private int numBlocks;
 	private Map<Component, Integer> translation = new HashMap<Component, Integer>();
 	
-	public NativeCodeGenerator(PropNet propNet) {
+	public JavaCodeGenerator(PropNet propNet) {
 		this.propNet = propNet;
 		this.roles = propNet.getRoles();
 		this.order = computeOrder();

@@ -1,8 +1,10 @@
 package apps.team.util;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
 import apps.pgggppg.compilation.NativePropNetStateMachine;
 import apps.team.Connect4Machine;
@@ -30,15 +32,19 @@ public class MachineEvaluator {
 			//new Connect4Machine(),
 			//new ProverStateMachine()
 		};
-		int depth = 6;
+		int depth = 10;
+		int N = 1;
 		
 		MachineEvaluator eval = new MachineEvaluator();
 		for (StateMachine machine: machines) {
 			machine.initialize(game.getRules());
-			eval.evaluate(machine, depth);
+			for (int i = 0; i < N; i++) {
+				eval.evaluate(machine, depth);
+			}
 		}
 	}
 
+	private Set<MachineState> cache = new HashSet<MachineState>();
 	private StateMachine machine;
 	private int stateCount;
 	private Role role;
@@ -52,13 +58,14 @@ public class MachineEvaluator {
 		stateCount = 0;
 		goalSum = 0;
 		goalCount = 0;
-		role = machine.getRoles().get(0);
+		cache.clear();
+		role = machine.getRoles().get(1);
 		long start = System.currentTimeMillis();
 		
 		try {
-			evaluate(machine.getInitialState(), depth);
+			//evaluate(machine.getInitialState(), depth);
 			for (int i = 0; i < 1000; i++) {
-				//performDepthCharge(machine.getInitialState());
+				performDepthCharge(machine.getInitialState());
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -78,6 +85,13 @@ public class MachineEvaluator {
 		if (depth == 0) {
 			return;
 		}
+		
+		if (cache.contains(state)) {
+			return;
+		}
+		
+		cache.add(state);
+		
 		// terminal
 		if (machine.isTerminal(state)) {
 			goalSum += machine.getGoal(state, role);
@@ -101,5 +115,6 @@ public class MachineEvaluator {
 		}
 		goalCount++;
 		goalSum += machine.getGoal(state, role);
+		System.out.println(goalSum * 1.0 / goalCount);
 	}
 }

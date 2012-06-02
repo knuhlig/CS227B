@@ -1,3 +1,4 @@
 bin/
 logs/*
 games/cache/*
+src/apps/pgggppg/compilation/gen/*

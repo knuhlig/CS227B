@@ -68,7 +68,7 @@ public class NativePropNetStateMachine extends StateMachine {
 			PropNet propNet = OptimizingPropNetFactory.create(description);
 			//propNet.renderToFile("/Users/knuhlig/Desktop/game.dot");
 			
-			NativeCodeGenerator gen = new NativeCodeGenerator(propNet);
+			JavaCodeGenerator gen = new JavaCodeGenerator(propNet);
 			gen.generateCode();
 			
 			// add role mappings
