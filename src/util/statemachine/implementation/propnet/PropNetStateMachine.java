@@ -3,12 +3,9 @@ package util.statemachine.implementation.propnet;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import apps.team.game.GameLoader;
 
 import util.game.Game;
 import util.gdl.grammar.Gdl;
@@ -19,7 +16,6 @@ import util.gdl.grammar.GdlTerm;
 import util.propnet.architecture.Component;
 import util.propnet.architecture.PropNet;
 import util.propnet.architecture.components.Constant;
-import util.propnet.architecture.components.Or;
 import util.propnet.architecture.components.Proposition;
 import util.propnet.factory.OptimizingPropNetFactory;
 import util.statemachine.MachineState;
@@ -30,9 +26,20 @@ import util.statemachine.exceptions.GoalDefinitionException;
 import util.statemachine.exceptions.MoveDefinitionException;
 import util.statemachine.exceptions.TransitionDefinitionException;
 import util.statemachine.implementation.prover.query.ProverQueryBuilder;
+import apps.pgggppg.compilation.NativePropNetStateMachine;
+import apps.pgggppg.optimizations.PassthroughNodeRemover;
+import apps.team.game.GameLoader;
 
 @SuppressWarnings("unused")
 public class PropNetStateMachine extends StateMachine {
+	
+	public static void main(String[] args) {
+		GameLoader loader = new GameLoader();
+		System.out.println(loader.getAvailableGames());
+		Game game = loader.loadGdlGame("lightsOnParallel");
+		PropNetStateMachine machine = new PropNetStateMachine();
+		machine.initialize(game.getRules());
+	}
 
 	/** The underlying proposition network  */
 	private PropNet propNet;
@@ -55,37 +62,26 @@ public class PropNetStateMachine extends StateMachine {
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
+		
+		propNet.renderToFile("C:\\Users\\David\\Desktop\\graph1.dot");
+		//new DeadNodeEliminator(propNet).runPass();
+		//new NotSquasher(propNet).runPass();
+		//new DeadNodeEliminator(propNet).runPass();
+		//new PassthroughNodeRemover(propNet).runPass();
+		//new DeadNodeEliminator(propNet).runPass();
+		//new EquivalenceMerger(propNet).runPass();
+		//new DeadNodeEliminator(propNet).runPass();
+		new PassthroughNodeRemover(propNet).runPass();
+		//new DeadNodeEliminator(propNet).runPass();
+		System.out.println("made aaaas!");
+		propNet.renderToFile("C:\\Users\\David\\Desktop\\graph2.dot");
+		System.out.println("made it!");
+		
 		roles = propNet.getRoles();
 		componentOrdering = new ArrayList<Component>();
 		ordering = getOrdering(componentOrdering);
-		//System.out.println(ordering);
 	}
-	
-	public void factor(Role role)
-	{
-		Proposition terminal = propNet.getTerminalProposition();
-		Component termCond = terminal.getSingleInput();
-		if (termCond instanceof Or) {
-			Or or = (Or) termCond;
-			Set<Component> inputs = or.getInputs();
-			Map<Role, Set<Proposition>> goalsByRole = propNet.getGoalPropositions();
-			Set<Proposition> goals = goalsByRole.get(role);
-			
-			Component target = null;
-			for (Proposition goal : goals) {
-				Component input = goal.getSingleInput();
-				if (input instanceof Or) {
-					Or goalOr = (Or) input;
-					target = goalOr.getInputs().iterator().next();
-					goalOr.removeAllInputs();
-					or.removeAllInputs();
-					goalOr.addInput(target);
-					or.addInput(target);
-					return;
-				}
-			}			
-		}
-	}
+
 
 	/**
 	 * Computes if the state is terminal. Should return the value
@@ -197,7 +193,7 @@ public class PropNetStateMachine extends StateMachine {
 	public List<Proposition> getOrdering(List<Component> componentOrdering)
 	{
 		// List to contain the topological ordering.
-		List<Proposition> order = new LinkedList<Proposition>();
+		List<Proposition> order = new ArrayList<Proposition>();
 
 		// All of the components in the PropNet
 		List<Component> components = new ArrayList<Component>(propNet.getComponents());
@@ -318,6 +314,11 @@ public class PropNetStateMachine extends StateMachine {
 
 	private void setState(MachineState state, List<Move> moves) {
 		propNet.getInitProposition().setValue(false);
+		
+		// Uncache everything
+		for (Component c : propNet.getComponents()) {
+			c.uncacheValue();
+		}
 
 		// set base propositions
 		Set<GdlSentence> contents = state.getContents();
