@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import apps.pgggppg.optimizations.Optimization;
+import apps.pgggppg.optimizations.PassthroughNodeRemover;
 import apps.team.game.GameLoader;
 
 import util.game.Game;
@@ -66,6 +68,8 @@ public class NativePropNetStateMachine extends StateMachine {
 	public void initialize(List<Gdl> description) {
 		try {
 			PropNet propNet = OptimizingPropNetFactory.create(description);
+			Optimization.runPasses(propNet);
+			
 			//propNet.renderToFile("/Users/knuhlig/Desktop/game.dot");
 			
 			JavaCodeGenerator gen = new JavaCodeGenerator(propNet);

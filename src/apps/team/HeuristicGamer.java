@@ -50,6 +50,7 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 		reset();
 
 		return new NativePropNetStateMachine();
+		//return new PropNetStateMachine();
 	}
 	
 	public int getTerminalValue(MachineState state) throws GoalDefinitionException {

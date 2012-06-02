@@ -63,7 +63,7 @@ public class PropNetStateMachine extends StateMachine {
 			e.printStackTrace();
 		}
 		
-		propNet.renderToFile("C:\\Users\\David\\Desktop\\graph1.dot");
+		propNet.renderToFile("/Users/knuhlig/Desktop/unopt.dot");
 		//new DeadNodeEliminator(propNet).runPass();
 		//new NotSquasher(propNet).runPass();
 		//new DeadNodeEliminator(propNet).runPass();
@@ -74,7 +74,7 @@ public class PropNetStateMachine extends StateMachine {
 		new PassthroughNodeRemover(propNet).runPass();
 		//new DeadNodeEliminator(propNet).runPass();
 		System.out.println("made aaaas!");
-		propNet.renderToFile("C:\\Users\\David\\Desktop\\graph2.dot");
+		propNet.renderToFile("/Users/knuhlig/Desktop/opt.dot");
 		System.out.println("made it!");
 		
 		roles = propNet.getRoles();
