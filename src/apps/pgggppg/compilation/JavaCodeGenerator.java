@@ -29,7 +29,7 @@ import util.statemachine.MachineState;
 import util.statemachine.Role;
 
 public class JavaCodeGenerator {
-	
+	// something
 	private static final int BLOCK_BITS = 32;
 
 	private PropNet propNet;
