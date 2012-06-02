@@ -8,6 +8,23 @@ import util.propnet.architecture.PropNet;
 import util.propnet.architecture.components.Proposition;
 
 public abstract class Optimization {
+	
+	public static void runPasses(PropNet propNet) {
+		propNet.renderToFile("/Users/knuhlig/Desktop/unopt.dot");
+		new DeadNodeEliminator(propNet).runPass();
+		new NotSquasher(propNet).runPass();
+		new DeadNodeEliminator(propNet).runPass();
+		new PassthroughNodeRemover(propNet).runPass();
+		new DeadNodeEliminator(propNet).runPass();
+		new EquivalenceMerger(propNet).runPass();
+		new DeadNodeEliminator(propNet).runPass();
+		new PassthroughNodeRemover(propNet).runPass();
+		new DeadNodeEliminator(propNet).runPass();
+		System.out.println("made aaaas!");
+		propNet.renderToFile("/Users/knuhlig/Desktop/opt.dot");
+		System.out.println("made it!");
+	}
+	
 	protected PropNet propnet;
 	// Special components are the ones we can't optimize away.
 	private Set<Component> specialComponents;

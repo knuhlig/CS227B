@@ -17,7 +17,7 @@ public class PassthroughNodeRemover extends Optimization {
 	}
 	
 	public boolean isPassthrough (Component c) {
-		return !isSpecial(c) && (c instanceof Proposition || c instanceof And || c instanceof Or || c instanceof Transition) && c.getInputs().size() == 1;
+		return !isSpecial(c) && (c instanceof Proposition || c instanceof And || c instanceof Or) && c.getInputs().size() == 1;
 	}
 	
 	// Removes propositions that have only a single input (and which therefore can be eliminated;
