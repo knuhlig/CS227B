@@ -16,14 +16,19 @@ public final class Or extends Component
 	@Override
 	public boolean getValue()
 	{
+		if (valueIsCached()) {
+			return getCachedValue();
+		}
 		for ( Component component : getInputs() )
 		{
 			if ( component.getValue() )
 			{
-				return true;
+				setCachedValue(true);
+				return getCachedValue();
 			}
 		}
-		return false;
+		setCachedValue(false);
+		return getCachedValue();
 	}
 
 	/**

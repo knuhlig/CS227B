@@ -16,7 +16,11 @@ public final class Transition extends Component
 	@Override
 	public boolean getValue()
 	{
-		return getSingleInput().getValue();
+		if (valueIsCached()) {
+			return getCachedValue();
+		}
+		setCachedValue(getSingleInput().getValue());
+		return getCachedValue();
 	}
 
 	/**

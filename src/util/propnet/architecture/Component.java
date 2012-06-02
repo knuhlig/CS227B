@@ -19,6 +19,26 @@ public abstract class Component implements Serializable
     /** The outputs of the component. */
     private final Set<Component> outputs;
 
+    private boolean valueIsCached = false;
+    private boolean cachedValue = false;
+    
+    public void uncacheValue() {
+    	valueIsCached = false;
+    }
+    
+    protected void setCachedValue(boolean b) {
+    	valueIsCached = true;
+    	cachedValue = b;
+    }
+    
+    protected boolean valueIsCached() {
+    	return valueIsCached;
+    }
+    
+    protected boolean getCachedValue() {
+    	return cachedValue;
+    }
+    
     /**
      * Creates a new Component with no inputs or outputs.
      */
