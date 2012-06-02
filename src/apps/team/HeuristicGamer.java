@@ -5,8 +5,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import apps.pgggppg.compilation.NativePropNetStateMachine;
+
 import player.gamer.statemachine.StateMachineGamer;
 import util.gdl.grammar.Gdl;
+import util.propnet.architecture.PropNet;
+import util.propnet.factory.OptimizingPropNetFactory;
 import util.statemachine.MachineState;
 import util.statemachine.Move;
 import util.statemachine.StateMachine;
@@ -44,15 +48,8 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 	public StateMachine getInitialStateMachine() {
 		// initialize
 		reset();
-		List<Gdl> rules = getMatch().getGame().getRules();
-		//for (Gdl rule: rules) {
-		//	System.out.println(rule.toString());
-		//}
-		//return new StateMachine1336632681534();
-		//return PropNetStateMachine.compileNative(rules);
-		return new PropNetStateMachine();
-		//return new Connect4Machine();
-		//return new ProverStateMachine();
+
+		return new NativePropNetStateMachine();
 	}
 	
 	public int getTerminalValue(MachineState state) throws GoalDefinitionException {
@@ -133,11 +130,15 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 		return beta;
 	}
 	
+	private int stateCount = 0;
+	
 	private Pair<Score, Move> dls(MachineState state, int depth, Score alpha, Score beta) throws Exception {
 		// check periodically for a timeout
 		if (System.currentTimeMillis() + timeoutBuffer >= timeout) {
 			throw new RuntimeException("search timeout");
 		}
+		
+		stateCount++;
 		
 		StateMachine sm = getStateMachine();
 		
@@ -314,66 +315,13 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 		
 		long curTime = System.currentTimeMillis();
 		long duration = timeout - curTime;
-
 		this.timeout = curTime + duration;
-		//this.timeout = curTime + duration / 2;
-		//System.out.println("creating end game book");
-		//createEndGameBook();
-		/*
-		try {
-			int N = 100;
-			int numTrials = 10;
-			Matrix heuristics = new Matrix(N, 4);
-			Matrix estimates = new Matrix(N, 1);
-			
-			for (int it = 0; it < N; it++) {
-				MachineState randState = getRandomState();
-				int playerMobilityScore, playerFocusScore, opponentMobilityScore, opponentFocusScore;
-
-				Map<Move, List<MachineState>> successors = getTransitions(randState, false);
-				int numPossibleSuccessors = successors.size();
-
-				int numResultantStates = 0;
-				for (List<MachineState> successorGroup : successors.values()) {
-					numResultantStates += successorGroup.size();
-				}
-
-				// Maximize Player Mobility
-				playerMobilityScore = (int) (100 * sigmoid(0.3 * numPossibleSuccessors));
-
-				// Maximize Player Focus
-				playerFocusScore = (int) (100 * sigmoid(-0.3 * numPossibleSuccessors));
-
-				// Maximize Opponent Mobility
-				opponentMobilityScore = (int) (100 * sigmoid(0.3 * numResultantStates));
-
-				// Maximize Opponent Focus
-				opponentFocusScore = (int) (100 * sigmoid(-0.3 * numResultantStates));
-
-				// Monte Carlo Heuristic
-				int sum = 0;
-				for (int i = 0; i < numTrials; i++) {
-					MachineState terminal = depthCharge(randState);
-					sum += getStateMachine().getGoal(terminal, getRole());
-				}
-				sum /= numTrials;
-
-				heuristics.set(it, 0, playerMobilityScore);
-				heuristics.set(it, 1, playerFocusScore);
-				heuristics.set(it, 2, opponentMobilityScore);
-				heuristics.set(it, 3, opponentFocusScore);
-				estimates.set(it, 0, sum);
-			}
-			
-			Matrix weights = heuristics.solve(estimates);
-			for (int i = 0; i < 4; i++) {
-				System.out.println("weight " + i + ": " + weights.get(i, 0));
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		*/
+		
 		searchGameTree();
+		
+		long endTime = System.currentTimeMillis();
+		System.out.println("elapsed time: " + (endTime - curTime));
+		System.out.println("states/sec: " + (stateCount * 1000.0 / (endTime - curTime)));
 		
 		System.out.println(">> done metagaming");
 	}

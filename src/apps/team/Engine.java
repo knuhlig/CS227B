@@ -6,7 +6,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import apps.pgggppg.compilation.NativePropNetStateMachine;
+
 import player.gamer.statemachine.StateMachineGamer;
+import util.gdl.grammar.Gdl;
+import util.propnet.architecture.PropNet;
+import util.propnet.factory.OptimizingPropNetFactory;
 import util.statemachine.MachineState;
 import util.statemachine.Move;
 import util.statemachine.StateMachine;

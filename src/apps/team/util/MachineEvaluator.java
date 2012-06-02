@@ -2,7 +2,9 @@ package apps.team.util;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
+import apps.pgggppg.compilation.NativePropNetStateMachine;
 import apps.team.Connect4Machine;
 
 import util.game.Game;
@@ -17,14 +19,16 @@ import util.statemachine.implementation.prover.ProverStateMachine;
 public class MachineEvaluator {
 	
 	public static void main(String[] args) {
-		String gameName = "connectFour";
+		String gameName = "ticTacToe";
 		GameRepository repository = GameRepository.getDefaultRepository(); 
 		Game game = repository.getGame(gameName);
 		
 		StateMachine[] machines = new StateMachine[] {
 			//new ProverStateMachine(),
-			new PropNetStateMachine(),
-			new Connect4Machine()
+			//new PropNetStateMachine(),
+			new NativePropNetStateMachine(),
+			//new Connect4Machine(),
+			//new ProverStateMachine()
 		};
 		int depth = 6;
 		
@@ -38,15 +42,24 @@ public class MachineEvaluator {
 	private StateMachine machine;
 	private int stateCount;
 	private Role role;
+	private Random rand = new Random();
+	
+	private int goalSum = 0;
+	private int goalCount = 0;
 	
 	public void evaluate(StateMachine machine, int depth) {
 		this.machine = machine;
 		stateCount = 0;
+		goalSum = 0;
+		goalCount = 0;
 		role = machine.getRoles().get(0);
 		long start = System.currentTimeMillis();
 		
 		try {
 			evaluate(machine.getInitialState(), depth);
+			for (int i = 0; i < 1000; i++) {
+				//performDepthCharge(machine.getInitialState());
+			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -55,6 +68,7 @@ public class MachineEvaluator {
 		System.out.println("states: " + stateCount);
 		System.out.println("total time: " + (end - start)/1000.0 + " seconds");
 		System.out.println("avg: " + (end - start) * 1000.0 / stateCount + " us per state");
+		if (goalCount > 0) System.out.println("avg goal: " + (goalSum * 1.0 / goalCount));
 		System.out.println();
 	}
 	
@@ -66,6 +80,8 @@ public class MachineEvaluator {
 		}
 		// terminal
 		if (machine.isTerminal(state)) {
+			goalSum += machine.getGoal(state, role);
+			goalCount++;
 			return;
 		}
 		
@@ -75,5 +91,15 @@ public class MachineEvaluator {
 				evaluate(next, depth - 1);
 			}
 		}
+	}
+	
+	private void performDepthCharge(MachineState state) throws Exception {
+		while (!machine.isTerminal(state)) {
+			List<MachineState> states = machine.getNextStates(state);
+			state = states.get(rand.nextInt(states.size()));
+			stateCount++;
+		}
+		goalCount++;
+		goalSum += machine.getGoal(state, role);
 	}
 }

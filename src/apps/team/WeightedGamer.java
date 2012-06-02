@@ -60,6 +60,8 @@ public class WeightedGamer extends HeuristicGamer {
 		return val;
 		*/
 		
+		if (true) return 50;	
+		
 		int sum = 0;
 		for (int i = 0; i < numTrials; i++) {
 			MachineState terminal = depthCharge(state);

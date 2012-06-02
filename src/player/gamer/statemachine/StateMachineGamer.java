@@ -153,7 +153,7 @@ public abstract class StateMachineGamer extends SingleGameGamer
 			stateMachine.initialize(getMatch().getGame().getRules());
 			currentState = stateMachine.getInitialState();
 			role = stateMachine.getRoleFromProp(getRoleName());
-			getMatch().appendState(currentState.getContents());
+			//getMatch().appendState(currentState.getContents());
 
 			stateMachineMetaGame(timeout);
 		}

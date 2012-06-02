@@ -33,21 +33,6 @@ import util.statemachine.implementation.prover.query.ProverQueryBuilder;
 
 @SuppressWarnings("unused")
 public class PropNetStateMachine extends StateMachine {
-	
-	public static void main(String[] args) {
-		GameLoader loader = new GameLoader();
-		System.out.println(loader.getAvailableGames());
-		Game game = loader.loadGdlGame("lightsOnSimultaneous");
-		PropNetStateMachine machine = new PropNetStateMachine();
-		machine.initialize(game.getRules());
-		machine.propNet.renderToFile("/Users/knuhlig/Desktop/simul.dot");
-	}
-
-	public static NativePropNetStateMachine compileNative(List<Gdl> description) {
-		PropNetStateMachine raw = new PropNetStateMachine();
-		raw.initialize(description);
-		return raw.compile();
-	}
 
 	/** The underlying proposition network  */
 	private PropNet propNet;
@@ -74,18 +59,6 @@ public class PropNetStateMachine extends StateMachine {
 		componentOrdering = new ArrayList<Component>();
 		ordering = getOrdering(componentOrdering);
 		//System.out.println(ordering);
-	}
-
-	public NativePropNetStateMachine compile() {
-		NativeCodeGenerator cg = new NativeCodeGenerator(propNet, roles, componentOrdering);
-		NativePropNetStateMachine machine = cg.generateCode();
-		for (Set<Proposition> roleLegal: propNet.getLegalPropositions().values()) {
-			for (Proposition legal: roleLegal) {
-				int idx = cg.getNativeIdx(legal);
-				machine.addMapping(idx, getMoveFromProposition(legal));
-			}
-		}
-		return machine;
 	}
 	
 	public void factor(Role role)
