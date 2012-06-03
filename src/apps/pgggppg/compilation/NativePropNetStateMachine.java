@@ -68,11 +68,15 @@ public class NativePropNetStateMachine extends StateMachine {
 	public void initialize(List<Gdl> description) {
 		try {
 			PropNet propNet = OptimizingPropNetFactory.create(description);
+			propNet.renderToFile("/Users/knuhlig/Desktop/unopt.dot");
 			Optimization.runPasses(propNet);
 			
-			//propNet.renderToFile("/Users/knuhlig/Desktop/game.dot");
+			System.out.println(">> rendering propNet to file");
+			propNet.renderToFile("/Users/knuhlig/Desktop/opt.dot");
 			
+			//BooleanCodeGenerator gen = new BooleanCodeGenerator(propNet);
 			JavaCodeGenerator gen = new JavaCodeGenerator(propNet);
+			
 			gen.generateCode();
 			
 			// add role mappings

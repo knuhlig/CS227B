@@ -1,4 +1,4 @@
-package apps.team.util;
+package apps.pgggppg.util;
 
 import java.util.HashSet;
 import java.util.List;
@@ -21,7 +21,7 @@ import util.statemachine.implementation.prover.ProverStateMachine;
 public class MachineEvaluator {
 	
 	public static void main(String[] args) {
-		String gameName = "ticTacToe";
+		String gameName = "connectFour";
 		GameRepository repository = GameRepository.getDefaultRepository(); 
 		Game game = repository.getGame(gameName);
 		
@@ -32,8 +32,8 @@ public class MachineEvaluator {
 			//new Connect4Machine(),
 			//new ProverStateMachine()
 		};
-		int depth = 10;
-		int N = 1;
+		int depth = 5;
+		int N = 10;
 		
 		MachineEvaluator eval = new MachineEvaluator();
 		for (StateMachine machine: machines) {
@@ -63,9 +63,9 @@ public class MachineEvaluator {
 		long start = System.currentTimeMillis();
 		
 		try {
-			//evaluate(machine.getInitialState(), depth);
+			evaluate(machine.getInitialState(), depth);
 			for (int i = 0; i < 1000; i++) {
-				performDepthCharge(machine.getInitialState());
+				//performDepthCharge(machine.getInitialState());
 			}
 		} catch (Exception e) {
 			e.printStackTrace();

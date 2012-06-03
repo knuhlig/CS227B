@@ -28,7 +28,7 @@ import util.propnet.architecture.components.Transition;
 import util.statemachine.MachineState;
 import util.statemachine.Role;
 
-public class JavaCodeGenerator {
+public class BooleanCodeGenerator {
 	// something
 	private static final int BLOCK_BITS = 32;
 
@@ -45,7 +45,7 @@ public class JavaCodeGenerator {
 	private int numBlocks;
 	private Map<Component, Integer> translation = new HashMap<Component, Integer>();
 	
-	public JavaCodeGenerator(PropNet propNet) {
+	public BooleanCodeGenerator(PropNet propNet) {
 		this.propNet = propNet;
 		this.roles = propNet.getRoles();
 		this.order = computeOrder();
@@ -105,7 +105,6 @@ public class JavaCodeGenerator {
 			translation.put(c, translation.size());
 		}
 		
-		System.out.println(">> bit vector length: " + translation.size());
 		System.out.println(">> eliminated " + bitsSaved + " unnecessary bits");
 	}
 	
@@ -245,6 +244,8 @@ public class JavaCodeGenerator {
 		writeCopyBaseMethod();
 		writeMarkMethod();
 		writeTransitionMethod();
+		writeSetBitMethod();
+		writeGetBitMethod();
 		
 		// hash methods
 		writeHashCodeMethod();
@@ -329,9 +330,7 @@ public class JavaCodeGenerator {
 		writeLine(2, className + " state = new " + className + "();");
 		
 		int idx = translation.get(propNet.getInitProposition());
-		int blockIdx = idx / BLOCK_BITS;
-		int offset = idx % BLOCK_BITS;
-		writeLine(2, "state." + getDataBlock(blockIdx) + " |= 1 << "+ offset + ";");
+		writeLine(2, "state.setBit(" + idx + ", true);");
 		
 		writeLine(2, "state.mark();");
 		writeLine(2, "return state.transition();");
@@ -360,16 +359,8 @@ public class JavaCodeGenerator {
 	private void writeMarkMethod() {
 		writeLine(1, "private void mark() {");
 		for (Component c: order) {
-			// don't mark bits that aren't stored
-			if (!translation.containsKey(c)) {
-				continue;
-			}
-			
 			int idx = translation.get(c);
-			int blockIdx = idx / BLOCK_BITS;
-			int offset = idx % BLOCK_BITS;
-			String maskStr = getBitMask(offset);
-			writeLine(2, getDataBlock(blockIdx) + " |= "+getBitFunction(c, offset)+" & "+maskStr+";");
+			writeLine(2, "setBit(" + idx + ", " + getBitFunction(c) + ");");
 		}
 		writeLine(1, "}");
 	}
@@ -379,13 +370,31 @@ public class JavaCodeGenerator {
 		writeLine(2, className + " state = new " + className + "();");
 		for (Proposition p: propNet.getBasePropositions().values()) {
 			int idx = translation.get(p);
-			int blockIdx = idx / BLOCK_BITS;
-			int offset = idx % BLOCK_BITS;
-			String maskStr = getBitMask(offset);
-			writeLine(2, "state." + getDataBlock(blockIdx) + " |= "+getBitFunction(p, offset) + " & " + maskStr + ";");
+			writeLine(2, "state.setBit(" + idx + ", " + getBitFunction(p) + ");");
 		}
 		writeLine(2, "state.mark();");
 		writeLine(2, "return state;");
+		writeLine(1, "}");
+	}
+	
+	private void writeGetBitMethod() {
+		writeLine(1, "private boolean getBit(int idx) {");
+		writeLine(2, "int blockIdx = idx / " + BLOCK_BITS + ";");
+		writeLine(2, "int offset = idx % " + BLOCK_BITS + ";");
+		writeLine(2, "return (blocks[blockIdx] & (1 << offset)) != 0;");
+		writeLine(1, "}");
+	}
+	
+	private void writeSetBitMethod() {
+		writeLine(1, "private void setBit(int idx, boolean value) {");
+		writeLine(2, "int blockIdx = idx / " + BLOCK_BITS + ";");
+		writeLine(2, "int offset = idx % " + BLOCK_BITS + ";");
+		writeLine(2, "int mask = 1 << offset;");
+		writeLine(2, "if (value) {");
+		writeLine(3, "blocks[blockIdx] |= mask;");
+		writeLine(2, "} else { ");
+		writeLine(3, "blocks[blockIdx] &= ~mask;");
+		writeLine(2, "}");
 		writeLine(1, "}");
 	}
 	
@@ -443,79 +452,38 @@ public class JavaCodeGenerator {
 	
 	
 	
-	private String getBitFunction(Component c, int finalPos) {
+	private String getBitFunction(Component c) {
 		StringBuilder b = new StringBuilder();
 		b.append("(");
 		if (c instanceof Proposition || c instanceof Transition) {
 			// propositions and terminals have single inputs?
-			b.append(getComponentBit(c.getSingleInput(), finalPos));
+			b.append(getComponentBoolean(c.getSingleInput()));
 		} else if (c instanceof And) {
 			int count = 0;
 			for (Component input: c.getInputs()) {
-				if (count > 0) b.append(" & ");
-				b.append(getComponentBit(input, finalPos));
+				if (count > 0) b.append(" && ");
+				b.append(getComponentBoolean(input));
 				count++;
 			}
 		} else if (c instanceof Or) {
 			int count = 0;
 			for (Component input: c.getInputs()) {
-				if (count > 0) b.append(" | ");
-				b.append(getComponentBit(input, finalPos));
+				if (count > 0) b.append(" || ");
+				b.append(getComponentBoolean(input));
 				count++;
 			}
 		} else if (c instanceof Not) {
-			b.append("~" + getComponentBit(c.getSingleInput(), finalPos));
+			b.append("!" + getComponentBoolean(c.getSingleInput()));
 		} else if (c instanceof Constant) {
-			if (!c.getValue()) b.append("0");
-			b.append(getBitMask(finalPos));
+			b.append(c.getValue() ? "true" : "false");
 		}
 		b.append(")");
 		return b.toString();
 	}
 	
-	private String getBitMask(int pos) {
-		int mask = 1 << pos;
-		return "0x" + Integer.toHexString(mask);
-	}
-	
-	private String getComponentBit(Component c, int finalPos) {
-		if (c instanceof Constant) {
-			if (!c.getValue()) return "0";
-			return getBitMask(finalPos);
-		}
-		// compute transient bits on the fly
-		if (!translation.containsKey(c)) {
-			return getBitFunction(c, finalPos);
-		}
-		
-		int idx = translation.get(c);
-		int blockIdx = idx / BLOCK_BITS;
-		int shift = idx % BLOCK_BITS - finalPos;
-		
-		if (shift < 0) {
-			shift = -shift;
-			return "(" + getDataBlock(blockIdx) + " << " + shift + ")";
-		}
-		if (shift > 0) {
-			return "(" + getDataBlock(blockIdx) + " >>> " + shift + ")";
-		}
-		return getDataBlock(blockIdx);
-		
-	}
-	
 	private String getComponentBoolean(Component c) {
-		// compute bit function for unstored bits
-		if (!translation.containsKey(c)) {
-			return getBitFunction(c, 0) + " != 0";
-		}
 		int idx = translation.get(c);
-		int blockIdx = idx / BLOCK_BITS;
-		int offset = idx % BLOCK_BITS;
-		
-		int mask = 1 << offset;
-		String maskStr = "0x" + Integer.toHexString(mask);
-		
-		return "(" + getDataBlock(blockIdx) + " & " + maskStr + ") != 0";
+		return "getBit(" + idx + ")";
 	}
 	
 	
