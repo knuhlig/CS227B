@@ -9,44 +9,87 @@ import java.util.Set;
 
 import util.propnet.architecture.Component;
 import util.propnet.architecture.PropNet;
+import util.propnet.architecture.components.And;
+import util.propnet.architecture.components.Not;
+import util.propnet.architecture.components.Or;
+import util.propnet.architecture.components.Proposition;
 import util.propnet.architecture.components.Transition;
+import apps.pgggppg.util.FileUtil;
 import apps.team.Pair;
+import apps.team.graph.Digraph;
 
 public class ImplicationGraph {
-	PropNet propnet;
+	
+	private PropNet propnet;
+	private Digraph<Node, Void> graph;
 	
 	public ImplicationGraph (PropNet propnet) {
 		this.propnet = propnet;
-	}
-	
-	static class Graph {
-		Set<Node> nodes = new HashSet<Node>();
-		Map<Pair<Component, Boolean>, Node> nodeFromComponent = new HashMap<Pair<Component, Boolean>, Node>();
-		Map<Node, Pair<Component, Boolean>> componentFromNode = new HashMap<Node, Pair<Component, Boolean>>();
-	}
-	
-	static class Node {
-		boolean isTransition;
-		List<Node> outEdges = new ArrayList<Node>();
-		List<Node> inEdges = new ArrayList<Node>();
-	}
-	
-	void addComponent(Graph graph, Component c, boolean outputValue) {
-		Node n = new Node();
-		graph.nodes.add(n);
-		Pair<Component, Boolean> associatedValue = new Pair<Component, Boolean>(c, outputValue);
-		graph.nodeFromComponent.put(associatedValue, n);
-		graph.componentFromNode.put(n, associatedValue);
+		graph = new Digraph<Node, Void>();
 		
-		n.isTransition = c instanceof Transition;
+		for (Component c : propnet.getComponents()) {
+			if (c instanceof Or) {
+				for (Component in: c.getInputs()) {
+					graph.addEdge(new Node(in, true), new Node(c, true));
+				}
+				if (c.getInputs().size() == 1) {
+					graph.addEdge(new Node(c.getSingleInput(), false), new Node(c, false));
+				}
+			}
+			if (c instanceof And) {
+				for (Component in: c.getInputs()) {
+					graph.addEdge(new Node(in, false), new Node(c, false));
+				}
+				if (c.getInputs().size() == 1) {
+					graph.addEdge(new Node(c.getSingleInput(), true), new Node(c, true));
+				}
+			}
+			if (c instanceof Not) {
+				graph.addEdge(new Node(c.getSingleInput(), true), new Node(c, false));
+				graph.addEdge(new Node(c.getSingleInput(), false), new Node(c, true));
+			}
+			if (c instanceof Proposition || c instanceof Transition) {
+				if (c.getInputs().size() == 1) {
+					graph.addEdge(new Node(c.getSingleInput(), true), new Node(c, true));
+					graph.addEdge(new Node(c.getSingleInput(), false), new Node(c, false));
+				}
+			}
+		}
+		
+		Map<Integer, Set<Node>> sccMap = new HashMap<Integer, Set<Node>>();
+		Digraph<Integer, Void> sccs = graph.computeSCCs(sccMap);
+		
+		FileUtil.writeToFile(graph.toDot(), "/Users/knuhlig/Desktop/implication.dot");
 	}
 	
-	Graph createGraph() {
-		Graph graph = new Graph();
-		for (Component c : propnet.getComponents()) {
-			addComponent(graph, c, true);
-			addComponent(graph, c, false);
+	private static class Node {
+		Component c;
+		boolean b;
+		
+		public Node(Component c, Boolean b) {
+			this.c = c;
+			this.b = b;
 		}
-		return graph;
+		
+		@Override
+		public int hashCode() {
+			return c.hashCode() + (b ? 1 : 0);
+		}
+		
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj) return true;
+			if (!(obj instanceof Node)) return false;
+			Node node = (Node) obj;
+			return b == node.b && c.equals(node.c);
+		}
+		
+		@Override
+		public String toString() {
+			if (c instanceof Proposition) {
+				return ((Proposition) c).getName() + "_" + b;
+			}
+			return c.getClass().getSimpleName() + "_" + b;
+		}
 	}
 }

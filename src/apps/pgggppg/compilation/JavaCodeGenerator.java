@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import apps.pgggppg.optimizations.ImplicationGraph;
+
 import com.sun.tools.javac.Main;
 
 import util.gdl.grammar.GdlConstant;
@@ -46,6 +48,7 @@ public class JavaCodeGenerator {
 	private Map<Component, Integer> translation = new HashMap<Component, Integer>();
 	
 	public JavaCodeGenerator(PropNet propNet) {
+		new ImplicationGraph(propNet);
 		this.propNet = propNet;
 		this.roles = propNet.getRoles();
 		this.order = computeOrder();

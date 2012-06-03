@@ -21,7 +21,7 @@ import util.statemachine.implementation.prover.ProverStateMachine;
 public class MachineEvaluator {
 	
 	public static void main(String[] args) {
-		String gameName = "connectFour";
+		String gameName = "ticTacToe";
 		GameRepository repository = GameRepository.getDefaultRepository(); 
 		Game game = repository.getGame(gameName);
 		
