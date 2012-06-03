@@ -19,6 +19,7 @@ import util.gdl.grammar.GdlPool;
 import util.gdl.grammar.GdlProposition;
 import util.gdl.grammar.GdlSentence;
 import util.gdl.grammar.GdlTerm;
+import util.propnet.architecture.Component;
 import util.propnet.architecture.PropNet;
 import util.propnet.architecture.components.Proposition;
 import util.propnet.factory.OptimizingPropNetFactory;
@@ -48,6 +49,8 @@ public class NativePropNetStateMachine extends StateMachine {
 	private List<Map<Move, Integer>> doesToIndex = new ArrayList<Map<Move, Integer>>();
 	private Map<Integer, Move> indexToLegal = new HashMap<Integer, Move>();
 	
+	private Map<Integer, Component> translation = new HashMap<Integer, Component>();
+	
 	public void addRole(Role role) {
 		int idx = roles.size();
 		roles.add(role);
@@ -76,8 +79,14 @@ public class NativePropNetStateMachine extends StateMachine {
 			
 			//BooleanCodeGenerator gen = new BooleanCodeGenerator(propNet);
 			JavaCodeGenerator gen = new JavaCodeGenerator(propNet);
-			
 			gen.generateCode();
+			
+			for (Component c: propNet.getComponents()) {
+				int idx = gen.getNativeIdx(c);
+				if (idx >= 0) {
+					translation.put(idx, c);
+				}
+			}
 			
 			// add role mappings
 			for (Role role: propNet.getRoles()) {
@@ -107,6 +116,15 @@ public class NativePropNetStateMachine extends StateMachine {
 		}
 	}
 
+	public Set<Component> getComponents(MachineState state, boolean bitType) {
+		Set<Component> set = new HashSet<Component>();
+		Set<Integer> bits = ((NativeMachineState) state).getAllBits(bitType);
+		for (int bit: bits) {
+			set.add(translation.get(bit));
+		}
+		return set;
+	}
+	
 	@Override
 	public int getGoal(MachineState state, Role role) throws GoalDefinitionException {
 		int roleIdx = roleToIndex.get(role);

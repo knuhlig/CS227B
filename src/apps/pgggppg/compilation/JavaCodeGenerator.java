@@ -12,8 +12,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import apps.pgggppg.optimizations.ImplicationGraph;
-
 import com.sun.tools.javac.Main;
 
 import util.gdl.grammar.GdlConstant;
@@ -48,7 +46,6 @@ public class JavaCodeGenerator {
 	private Map<Component, Integer> translation = new HashMap<Component, Integer>();
 	
 	public JavaCodeGenerator(PropNet propNet) {
-		new ImplicationGraph(propNet);
 		this.propNet = propNet;
 		this.roles = propNet.getRoles();
 		this.order = computeOrder();
@@ -199,6 +196,9 @@ public class JavaCodeGenerator {
 	
 	
 	public int getNativeIdx(Component c) {
+		if (!translation.containsKey(c)) {
+			return -1;
+		}
 		return translation.get(c);
 	}
 	
@@ -243,6 +243,7 @@ public class JavaCodeGenerator {
 		writeLegalMethod();
 		writeNextStateMethod();
 		writeInitialStateMethod();
+		writeGetAllBitsMethod();
 		
 		// internal methods
 		writeCopyBaseMethod();
@@ -260,6 +261,7 @@ public class JavaCodeGenerator {
 	
 	private void writeInstanceVars() {
 		writeLine(1, "private int[] blocks = new int["+numBlocks+"];");
+		writeLine(1, "private int numBits = " + translation.size() + ";");
 		writeLine(1, "");
 	}
 	
@@ -338,6 +340,22 @@ public class JavaCodeGenerator {
 		
 		writeLine(2, "state.mark();");
 		writeLine(2, "return state.transition();");
+		writeLine(1, "}");
+		writeLine(1, "");
+	}
+	
+	private void writeGetAllBitsMethod() {
+		writeLine(1, "public Set<Integer> getAllBits(boolean bitType) {");
+		writeLine(2, "Set<Integer> bits = new HashSet<Integer>();");
+		writeLine(2, "for (int i = 0; i < blocks.length; i++) {");
+		writeLine(3, "int block = blocks[i];");
+		writeLine(3, "for (int j = 0; j < " + BLOCK_BITS + "; j++) {");
+		writeLine(4, "if ("+BLOCK_BITS + " * i + j >= numBits) break;");
+		writeLine(4, "boolean on = (block & (1 << j)) != 0;");
+		writeLine(4, "if (on == bitType) bits.add("+BLOCK_BITS+" * i + j);");
+		writeLine(3, "}");
+		writeLine(2, "}");
+		writeLine(2, "return bits;");
 		writeLine(1, "}");
 		writeLine(1, "");
 	}
