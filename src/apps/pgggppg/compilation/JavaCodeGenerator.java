@@ -31,6 +31,7 @@ import util.statemachine.Role;
 public class JavaCodeGenerator {
 	// something
 	private static final int BLOCK_BITS = 32;
+	private int methodLengthLimit = 50000;
 
 	private PropNet propNet;
 	private List<Component> order;
@@ -379,32 +380,41 @@ public class JavaCodeGenerator {
 	}
 	
 	private void writeMarkMethod() {
-		String total = "";
+		StringBuilder b = new StringBuilder();
 		int methodNum = 0;
 		
-		writeLine(1, "private void mark() {");
+		writeLine(b, 1, "private void mark" + methodNum + "() {");
+		
 		for (Component c: order) {
-			// don't mark bits that aren't stored
 			if (!translation.containsKey(c)) {
 				continue;
 			}
 			
+			// get code line
 			int idx = translation.get(c);
 			int blockIdx = idx / BLOCK_BITS;
 			int offset = idx % BLOCK_BITS;
 			String maskStr = getBitMask(offset);
-			
 			String line = getDataBlock(blockIdx) + " |= "+getBitFunction(c, offset)+" & "+maskStr+";";
-			total += line;
-			if (total.length() >= 10000) {
+			
+			int nextLength = b.length() + line.length() + 2;
+			if (nextLength >= methodLengthLimit) {
+				writeLine(b, 1, "}");
+				writeLine(0, b.toString());
+				b = new StringBuilder();
 				methodNum++;
-				writeLine(2, "mark" + methodNum + "();");
-				writeLine(1, "}");
-				writeLine(1, "");
-				writeLine(1, "private void mark" + methodNum + "() {");
-				total = "";
+				writeLine(b, 1, "private void mark" + methodNum + "() {");
 			}
-			writeLine(2, line);
+			
+			writeLine(b, 2, line);
+		}
+		
+		writeLine(b, 1, "}");
+		writeLine(0, b.toString());
+		
+		writeLine(1, "public void mark() {");
+		for (int i = 0; i <= methodNum; i++) {
+			writeLine(2, "mark" + i + "();");
 		}
 		writeLine(1, "}");
 	}
@@ -579,6 +589,17 @@ public class JavaCodeGenerator {
 				out.write("\t");
 			}
 			out.write(line + "\n");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	private void writeLine(StringBuilder b, int indent, String line) {
+		try {
+			for (int i = 0; i < indent; i++) {
+				b.append("\t");
+			}
+			b.append(line + "\n");
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

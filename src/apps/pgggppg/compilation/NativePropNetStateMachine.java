@@ -67,9 +67,19 @@ public class NativePropNetStateMachine extends StateMachine {
 		indexToLegal.put(idx, move);
 	}
 	
+	private void reset() {
+		initialState = null;
+		roles.clear();
+		roleToIndex.clear();
+		doesToIndex.clear();
+		indexToLegal.clear();
+		translation.clear();
+	}
+	
 	@Override
 	public void initialize(List<Gdl> description) {
 		try {
+			reset();
 			PropNet propNet = OptimizingPropNetFactory.create(description);
 			propNet.renderToFile("/Users/knuhlig/Desktop/unopt.dot");
 			Optimization.runPasses(propNet);
