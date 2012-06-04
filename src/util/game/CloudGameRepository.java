@@ -43,7 +43,7 @@ import util.configuration.ProjectConfiguration;
 public final class CloudGameRepository extends GameRepository {
     private final String theRepoURL;
     private final File theCacheDirectory;
-    private static boolean needsRefresh = false;
+    private static boolean needsRefresh = true;
     
     public CloudGameRepository(String theURL) {
         theRepoURL = RemoteGameRepository.properlyFormatURL(theURL);
@@ -130,7 +130,7 @@ public final class CloudGameRepository extends GameRepository {
         }
         
         @Override
-        public void run() {            
+        public void run() {
             try {
                 // Sleep for the first two seconds after which the cache is loaded,
                 // so that we don't interfere with the user interface startup.
@@ -139,6 +139,7 @@ public final class CloudGameRepository extends GameRepository {
                 e.printStackTrace();
                 return;
             }
+            
 
             RemoteGameRepository remoteRepository = new RemoteGameRepository(theRepoURL);
 
