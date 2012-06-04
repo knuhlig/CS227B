@@ -104,6 +104,7 @@ public class LatchSquasher extends Optimization {
 			}
 			if (numTransitions == 1) {
 				latchSccs.add(nodesInScc);
+				System.out.println("Found latch of size " + nodesInScc.size());
 			} else if (numTransitions > 1) {
 				System.out.println("More than 1 transition in SCC!");
 			}
@@ -121,5 +122,6 @@ public class LatchSquasher extends Optimization {
 				nodesImpliedByComponentMarking.put(new Pair<Component, Boolean>(n.c,n.b), s);
 			}
 		}
+		
 	}
 }
