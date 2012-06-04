@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.Collections;
 
 import player.gamer.statemachine.StateMachineGamer;
-import util.gdl.grammar.Gdl;
 import util.statemachine.MachineState;
 import util.statemachine.Move;
 import util.statemachine.Role;
@@ -15,13 +14,9 @@ import util.statemachine.StateMachine;
 import util.statemachine.exceptions.GoalDefinitionException;
 import util.statemachine.exceptions.MoveDefinitionException;
 import util.statemachine.exceptions.TransitionDefinitionException;
-import util.statemachine.implementation.prover.ProverStateMachine;
-//import util.statemachine.implementation.propnet.PropNetStateMachine;
+import apps.pgggppg.compilation.NativePropNetStateMachine;
 
 public class UctGamer extends StateMachineGamer {
-	
-	private static final int GOAL_MIN = 0;
-	private static final int GOAL_MAX = 100;
 		
 	// Caches
 	private Map<Pair<Role, MachineState>, Map<Move,List<MachineState>>> transitionCache;
@@ -34,7 +29,6 @@ public class UctGamer extends StateMachineGamer {
 	private long stopTime;
 	private long timeoutBuffer = 1000;
 	private boolean breakout = false;
-	
 	
 	// UCT parameter
 	private Double C = 40.0;
@@ -59,10 +53,7 @@ public class UctGamer extends StateMachineGamer {
 	
 	@Override
 	public StateMachine getInitialStateMachine() {
-		// initialize
-		reset();
-		List<Gdl> rules = getMatch().getGame().getRules();
-		return new ProverStateMachine();
+		return new NativePropNetStateMachine();
 	}
 		
 	public Map<Move, List<MachineState>> getTransitions(Role role, MachineState state, boolean cache) throws Exception {
@@ -85,27 +76,8 @@ public class UctGamer extends StateMachineGamer {
 	public int randomInt(int n) {
 		return (int) (Math.random() * n);
 	}
-	
 		
-	public Pair<List<MachineState>,List<List<Move>>> depthChargeUCT(MachineState state) throws Exception{
-		List<MachineState> statePath = new ArrayList<MachineState>();
-		List<List<Move>> moveList = new ArrayList<List<Move>>();
-		do{
-			// maybe only do this every n-th iteration?
-        	if (System.currentTimeMillis() + timeoutBuffer >= timeout) {
-        		throw new RuntimeException("search timeout");
-        	}
-			
-			List<Move> turnMoves = getStateMachine().getRandomJointMove(state);
-			statePath.add(state);
-			moveList.add(turnMoves);
-			state = getStateMachine().getNextState(state,turnMoves);
-			
-		}while(!isTerminal(state));
-		statePath.add(state);
-		return new Pair<List<MachineState>,List<List<Move>>>(statePath, moveList);
-	}
-	
+	// Computes the UCT score
 	Double computeUCTScore(Pair<Role, Pair<MachineState,Move>> key){
 		return scoreCache.get(key) + C*Math.sqrt(Math.log(stateCounts.get(key.snd.fst)) / countCache.get(key) );
 	}
@@ -153,12 +125,13 @@ public class UctGamer extends StateMachineGamer {
 					break;
 			}
 			
-		    /*
-			if(unexplored){
-				System.out.println(role + "is picking an unexplored move");
-			}
-			System.out.println(role + " is choosing move with score: " + bestScore);
-			*/
+		    if(this.debug){
+		    	if(unexplored){
+		    		System.out.println(role + "is picking an unexplored move");
+		    	}
+		    	System.out.println(role + " is choosing move with score: " + bestScore);
+		    }
+		    
 			return bestMove;
 		}
 		catch (Exception e) {
@@ -169,7 +142,7 @@ public class UctGamer extends StateMachineGamer {
 	}
 	
 	
-	// TODO: add timeout
+	// Does the recursive UCT search (basically UCT depth charge)
 	Pair<List<Double>,List<List<Move>>> search(MachineState state){
 		try{
 			if(stateCounts.get(state) == null){
@@ -193,20 +166,21 @@ public class UctGamer extends StateMachineGamer {
 			// All players select move based on UCT rule
 			// Works for both simultaneous and alternating
 			List<Move> playerMoves = new ArrayList<Move>();
-			Boolean breakout = false;
 			for (Role r : getStateMachine().getRoles()) {
 				
 				// if move returned is null, break out
 				Move curMove = selectMove(r,state);
 				if(this.breakout)
 					return null;
-				playerMoves.add(selectMove(r,state));
+				playerMoves.add(curMove);
 			}
 			
 			MachineState nextState = getStateMachine().getNextState(state, playerMoves);
 			
 			// Recurse on next state
 			Pair<List<Double>,List<List<Move>>> ret = search(nextState);
+			if(this.breakout)
+				return null;
 			List<Double>scores = ret.fst;
 			List<List<Move>> movesList = ret.snd;
 			movesList.add(playerMoves);
@@ -231,7 +205,7 @@ public class UctGamer extends StateMachineGamer {
 					countCache.put(key, 1.0);
 					
 					// begin debug
-					if(debug){
+					if(this.debug){
 						if(uctRuns.get(key)==null){
 							List<List<List<Move>>> l = new ArrayList<List<List<Move>>>();
 							List<List<Move>> starter = new ArrayList<List<Move>>();
@@ -257,7 +231,7 @@ public class UctGamer extends StateMachineGamer {
 					countCache.put(key,n+1.0);
 					
 					// begin debug
-					if(debug){
+					if(this.debug){
 						if(uctRuns.get(key)==null){
 							List<List<List<Move>>> l = new ArrayList<List<List<Move>>>();
 							List<List<Move>> starter = new ArrayList<List<Move>>();
@@ -283,6 +257,7 @@ public class UctGamer extends StateMachineGamer {
 		}
 		catch (Exception e) {
 			System.out.println("Something wrong in search: " + e.getMessage());
+			e.printStackTrace();
 		}
 		
 		// should never get here
@@ -326,7 +301,7 @@ public class UctGamer extends StateMachineGamer {
 						
 						Double score = scoreCache.get(key);
 				
-						if(debug)
+						if(this.debug)
 							System.out.println(role + " has move " + curMove + " with score " + score);
 						
 						if(score > bestScore){
@@ -346,7 +321,7 @@ public class UctGamer extends StateMachineGamer {
 			}else{
 				System.out.println("Found a move for " + role + " with score: " + bestScore + " at move " + bestMove);
 				// begin debug
-				if(debug){
+				if(this.debug){
 					if(bestMove.toString() == "noop")
 						return bestMove;
 
@@ -418,20 +393,22 @@ public class UctGamer extends StateMachineGamer {
 	public void stateMachineMetaGame(long timeout)
 			throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException {
 		System.out.println(">> metagaming");
-		System.out.println(">> timeout: " + timeout);
+		
 		
 		
 		this.timeout = timeout;
 		long startTime = System.currentTimeMillis();
 		long duration = timeout - startTime;
+		System.out.println(">> start time: " + startTime);
+		System.out.println(">> timeout: " + timeout);
 		System.out.println(">> duration: " + duration);
 		
-		this.timeout = startTime + duration;
+		this.stopTime = startTime + duration;
 		try{
 			MachineState start = getStateMachine().getInitialState();
 			Integer n = 0;
-			
-			// no metagaming right no (switch to true to turn on)
+
+			// Drop UCT charges until we run out of time
 			while(true){
 				this.breakout = false;
 				search(start);
@@ -440,7 +417,8 @@ public class UctGamer extends StateMachineGamer {
 				}
 				n++;
 			}
-			System.out.println("Performed " + n + " UCT depth charges in " + duration + " milliseconds.");
+			System.out.println(">>Performed " + n + " UCT depth charges in " + duration + " milliseconds.");
+			System.out.println(">>Score cache size: " + scoreCache.size());
 			
 		}catch (Exception e){
 			System.out.println(">> metagaming killed");
@@ -455,7 +433,7 @@ public class UctGamer extends StateMachineGamer {
 			throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException {
 		this.timeout = timeout;
 		this.stopTime = this.timeout - this.timeoutBuffer;
-		System.out.println("We have " + (this.stopTime - System.currentTimeMillis()) + " ms to search");
+		System.out.println(">>Search time: " + (this.stopTime - System.currentTimeMillis()) + " ms");
 		return getNextMove();
 	}
 
