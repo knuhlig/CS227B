@@ -42,7 +42,7 @@ public class GameStateRenderer {
         return defaultSize;
     }
 
-    public static void renderImagefromGameXML(String gameXML, String XSL, BufferedImage backimage)
+    synchronized public static void renderImagefromGameXML(String gameXML, String XSL, BufferedImage backimage)
     {
         Graphics2DRenderer r = new Graphics2DRenderer();
 

@@ -22,19 +22,17 @@ public class UctGamer extends StateMachineGamer {
 	
 	private static final int GOAL_MIN = 0;
 	private static final int GOAL_MAX = 100;
-	
-	// configurable
-	private long timeoutBuffer = 1000;
-	
-	// caches
+		
+	// Caches
 	private Map<Pair<Role, MachineState>, Map<Move,List<MachineState>>> transitionCache;
 	private Map<Pair<Role, Pair<MachineState,Move>>,Double> scoreCache;
 	private Map<Pair<Role, Pair<MachineState,Move>>,Double> countCache;
 	private Map<MachineState,Integer> stateCounts;
 	
-	// for timeout handling
+	// Timeout Handling
 	private long timeout;
 	private long stopTime;
+	private long timeoutBuffer = 1000;
 	private boolean breakout = false;
 	
 	
