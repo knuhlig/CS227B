@@ -1,5 +1,6 @@
 package apps.pgggppg.uct;
 
+import java.text.NumberFormat;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,8 +11,6 @@ public class UCTNode {
 
 	private UCTMetadata[] playerData;
 	private int[] goalValues;
-	private boolean isTerminal;
-	
 	
 	public UCTNode(int numPlayers) {
 		playerData = new UCTMetadata[numPlayers];
@@ -40,10 +39,16 @@ public class UCTNode {
 		return data.getOptimalAction();
 	}
 	
+	public Move sampleAction(int playerIdx) {
+		UCTMetadata data = playerData[playerIdx];
+		return data.sampleAction();
+	}
+	
 	public double getPayoff(int playerIdx, Move action) {
 		UCTMetadata data = playerData[playerIdx];
 		ActionMetadata actionData = data.map.get(action);
-		return actionData.payoffSum / actionData.actionCount;
+		double q = actionData.qSum / actionData.actionCount;
+		return q;
 	}
 	
 	public void setActions(int playerIdx, List<Move> actions) {
@@ -53,13 +58,32 @@ public class UCTNode {
 		}
 	}
 	
+	public void printQValues(int playerIdx) {
+		NumberFormat fmt = NumberFormat.getInstance();
+		fmt.setMaximumFractionDigits(3);
+		fmt.setMinimumFractionDigits(3);
+		
+		System.out.println("\n========== Move Options ========");
+		UCTMetadata data = playerData[playerIdx];
+		for (Move action: data.map.keySet()) {
+			ActionMetadata actionData = data.map.get(action);
+			if (actionData.actionCount > 0) {
+				double qValue = actionData.qSum / actionData.actionCount;
+				System.out.println("(" + actionData.actionCount + ") " + fmt.format(qValue) + " => " + action);
+			} else {
+				System.out.println("n/a => " + action);
+			}
+		}
+		System.out.println("================================\n");
+	}
+	
 	public void update(int playerIdx, Move action, double qValue) {
 		UCTMetadata data = playerData[playerIdx];
 		data.stateCount++;
 		
 		ActionMetadata actionData = data.map.get(action);
 		actionData.actionCount++;
-		actionData.payoffSum += qValue;
+		actionData.qSum += qValue;
 	}
 	
 	private static class UCTMetadata {
@@ -71,7 +95,7 @@ public class UCTNode {
 			map = new HashMap<Move, ActionMetadata>();
 		}
 		
-		public Move getOptimalAction() {
+		public Move sampleAction() {
 			Move optAction = null;
 			double optA = 0;
 			
@@ -84,7 +108,7 @@ public class UCTNode {
 					break;
 				}
 				
-				double q = actionData.payoffSum / actionData.actionCount;
+				double q = actionData.qSum / actionData.actionCount;
 				double a = q + UCT.C * Math.sqrt(Math.log(stateCount) / actionData.actionCount);
 				
 				// maximize
@@ -92,6 +116,35 @@ public class UCTNode {
 					optAction = action;
 					optA = a;
 				}
+			}
+
+			return optAction;
+		}
+		
+		public Move getOptimalAction() {
+			Move optAction = null;
+			double optQ = 0;
+			
+			for (Move action: map.keySet()) {
+				ActionMetadata actionData = map.get(action);
+				
+				// return unexplored actions first
+				if (actionData.actionCount == 0) {
+					continue;
+				}
+				
+				double q = actionData.qSum / actionData.actionCount;
+				
+				// maximize
+				if (optAction == null || q > optQ) {
+					optAction = action;
+					optQ = q;
+				}
+			}
+
+			// this could only happen if we never did a single depth charge
+			if (optAction == null) {
+				return map.keySet().iterator().next();
 			}
 			
 			return optAction;
@@ -101,6 +154,6 @@ public class UCTNode {
 	
 	private static class ActionMetadata {
 		public int actionCount;
-		public double payoffSum;
+		public double qSum;
 	}
 }

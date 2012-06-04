@@ -41,8 +41,9 @@ public class UCT {
 	}
 	
 	public Move selectBestMove(MachineState state, long timeout) throws Exception {
-		searchRepeatedly(state, timeout);
 		UCTNode node = getOrCreateNode(state);
+		searchRepeatedly(state, timeout);
+		node.printQValues(myPlayerIdx);
 		Move action = node.getOptimalAction(myPlayerIdx);
 		System.out.println(">> optimal action:");
 		System.out.println("        move: " + action);
@@ -83,7 +84,7 @@ public class UCT {
 		
 		List<Move> sampledActions = new ArrayList<Move>();
 		for (int i = 0; i < numPlayers; i++) {
-			sampledActions.add(node.getOptimalAction(i));
+			sampledActions.add(node.sampleAction(i));
 		}
 		
 		search(machine.getNextState(state, sampledActions), qValues);

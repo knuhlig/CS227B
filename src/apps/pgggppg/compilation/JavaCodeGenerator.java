@@ -50,7 +50,7 @@ public class JavaCodeGenerator {
 		this.propNet = propNet;
 		this.roles = propNet.getRoles();
 		this.order = computeOrder();
-		className = "MachineState" + System.currentTimeMillis();
+		className = "MachineState" + System.currentTimeMillis() + "_" + ((int)(Math.random() * 100000));
 		srcPackage = "apps.pgggppg.compilation.gen";
 		fileName = "src/apps/pgggppg/compilation/gen/" + className + ".java";
 		generateTranslation();
