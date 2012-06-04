@@ -1,4 +1,4 @@
-package apps.team;
+package apps.pgggppg;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -16,7 +16,9 @@ import util.statemachine.StateMachine;
 import util.statemachine.exceptions.GoalDefinitionException;
 import util.statemachine.exceptions.MoveDefinitionException;
 import util.statemachine.exceptions.TransitionDefinitionException;
+import util.statemachine.implementation.prover.ProverStateMachine;
 import apps.pgggppg.compilation.NativePropNetStateMachine;
+import apps.team.Pair;
 
 public class UctGamer extends StateMachineGamer {
 		
@@ -55,7 +57,9 @@ public class UctGamer extends StateMachineGamer {
 	
 	@Override
 	public StateMachine getInitialStateMachine() {
+		reset();
 		return new NativePropNetStateMachine();
+		//return new ProverStateMachine();
 	}
 		
 	public Map<Move, List<MachineState>> getTransitions(Role role, MachineState state, boolean cache) throws Exception {
@@ -405,7 +409,7 @@ public class UctGamer extends StateMachineGamer {
 		System.out.println(">> timeout: " + timeout);
 		System.out.println(">> duration: " + duration);
 		
-		this.stopTime = startTime + duration;
+		stopTime = startTime + duration - timeoutBuffer;
 		try{
 			MachineState start = getStateMachine().getInitialState();
 			Integer n = 0;

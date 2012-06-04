@@ -379,6 +379,9 @@ public class JavaCodeGenerator {
 	}
 	
 	private void writeMarkMethod() {
+		String total = "";
+		int methodNum = 0;
+		
 		writeLine(1, "private void mark() {");
 		for (Component c: order) {
 			// don't mark bits that aren't stored
@@ -390,7 +393,18 @@ public class JavaCodeGenerator {
 			int blockIdx = idx / BLOCK_BITS;
 			int offset = idx % BLOCK_BITS;
 			String maskStr = getBitMask(offset);
-			writeLine(2, getDataBlock(blockIdx) + " |= "+getBitFunction(c, offset)+" & "+maskStr+";");
+			
+			String line = getDataBlock(blockIdx) + " |= "+getBitFunction(c, offset)+" & "+maskStr+";";
+			total += line;
+			if (total.length() >= 10000) {
+				methodNum++;
+				writeLine(2, "mark" + methodNum + "();");
+				writeLine(1, "}");
+				writeLine(1, "");
+				writeLine(1, "private void mark" + methodNum + "() {");
+				total = "";
+			}
+			writeLine(2, line);
 		}
 		writeLine(1, "}");
 	}
