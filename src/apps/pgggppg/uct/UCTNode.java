@@ -46,7 +46,7 @@ public class UCTNode {
 	
 	public double getPayoff(int playerIdx, Move action) {
 		UCTMetadata data = playerData[playerIdx];
-		ActionMetadata actionData = data.map.get(action);
+		ActionMetadata actionData = data.actionMap.get(action);
 		double q = actionData.qSum / actionData.actionCount;
 		return q;
 	}
@@ -54,7 +54,7 @@ public class UCTNode {
 	public void setActions(int playerIdx, List<Move> actions) {
 		UCTMetadata data = playerData[playerIdx];
 		for (Move action: actions) {
-			data.map.put(action, new ActionMetadata());
+			data.actionMap.put(action, new ActionMetadata());
 		}
 	}
 	
@@ -65,8 +65,8 @@ public class UCTNode {
 		
 		System.out.println("\n========== Move Options ========");
 		UCTMetadata data = playerData[playerIdx];
-		for (Move action: data.map.keySet()) {
-			ActionMetadata actionData = data.map.get(action);
+		for (Move action: data.actionMap.keySet()) {
+			ActionMetadata actionData = data.actionMap.get(action);
 			if (actionData.actionCount > 0) {
 				double qValue = actionData.qSum / actionData.actionCount;
 				System.out.println("(" + actionData.actionCount + ") " + fmt.format(qValue) + " => " + action);
@@ -81,26 +81,26 @@ public class UCTNode {
 		UCTMetadata data = playerData[playerIdx];
 		data.stateCount++;
 		
-		ActionMetadata actionData = data.map.get(action);
+		ActionMetadata actionData = data.actionMap.get(action);
 		actionData.actionCount++;
 		actionData.qSum += qValue;
 	}
 	
 	private static class UCTMetadata {
 		public int stateCount;
-		public Map<Move, ActionMetadata> map;
+		public Map<Move, ActionMetadata> actionMap;
 		
 		public UCTMetadata() {
 			stateCount = 0;
-			map = new HashMap<Move, ActionMetadata>();
+			actionMap = new HashMap<Move, ActionMetadata>();
 		}
 		
 		public Move sampleAction() {
 			Move optAction = null;
 			double optA = 0;
 			
-			for (Move action: map.keySet()) {
-				ActionMetadata actionData = map.get(action);
+			for (Move action: actionMap.keySet()) {
+				ActionMetadata actionData = actionMap.get(action);
 				
 				// return unexplored actions first
 				if (actionData.actionCount == 0) {
@@ -125,8 +125,8 @@ public class UCTNode {
 			Move optAction = null;
 			double optQ = 0;
 			
-			for (Move action: map.keySet()) {
-				ActionMetadata actionData = map.get(action);
+			for (Move action: actionMap.keySet()) {
+				ActionMetadata actionData = actionMap.get(action);
 				
 				// return unexplored actions first
 				if (actionData.actionCount == 0) {
@@ -144,7 +144,7 @@ public class UCTNode {
 
 			// this could only happen if we never did a single depth charge
 			if (optAction == null) {
-				return map.keySet().iterator().next();
+				return actionMap.keySet().iterator().next();
 			}
 			
 			return optAction;
