@@ -1,27 +1,16 @@
 package apps.pgggppg;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Collections;
-
-import apps.pgggppg.compilation.NativePropNetStateMachine;
-
 import player.gamer.statemachine.StateMachineGamer;
 import util.statemachine.MachineState;
 import util.statemachine.Move;
-import util.statemachine.Role;
 import util.statemachine.StateMachine;
 import util.statemachine.exceptions.GoalDefinitionException;
 import util.statemachine.exceptions.MoveDefinitionException;
 import util.statemachine.exceptions.TransitionDefinitionException;
-import util.statemachine.implementation.prover.ProverStateMachine;
 import apps.pgggppg.compilation.NativePropNetStateMachine;
 import apps.pgggppg.uct.UCT;
-import apps.team.Pair;
 
-public class UCTGamer extends StateMachineGamer {
+public class UctGamer extends StateMachineGamer {
 		
 	@Override
 	public String getName() {
