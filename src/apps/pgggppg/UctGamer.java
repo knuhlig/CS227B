@@ -20,7 +20,7 @@ public class UctGamer extends StateMachineGamer {
 	
 	private UCT uct;
 	private NativePropNetStateMachine machine;
-	private long timeoutPadding = 1000;
+	private long timeoutPadding = 1700;
 	
 	@Override
 	public StateMachine getInitialStateMachine() {
@@ -35,6 +35,7 @@ public class UctGamer extends StateMachineGamer {
 			System.out.println(">> metagaming");
 			uct = new UCT(machine, getRole());
 			uct.searchRepeatedly(machine.getInitialState(), timeout - timeoutPadding);
+			System.out.println(">> done metagaming. Spare time: " + (timeout - System.currentTimeMillis()));
 		} catch (Exception e) {
 			System.out.println(">> metagaming: unhandled exception");
 			e.printStackTrace();
@@ -46,6 +47,7 @@ public class UctGamer extends StateMachineGamer {
 		MachineState currentState = getCurrentState();
 		try {
 			Move move = uct.selectBestMove(currentState, timeout - timeoutPadding);
+			System.out.println(">> move chosen. Spare time: " + (timeout - System.currentTimeMillis()));
 			return move;
 		} catch (Exception e) {
 			System.out.println(">> search: unhandled exception");

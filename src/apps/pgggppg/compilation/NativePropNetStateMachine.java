@@ -117,7 +117,6 @@ public class NativePropNetStateMachine extends StateMachine {
 		try {
 			reset();
 			propNet = OptimizingPropNetFactory.create(description);
-			//propNet.renderToFile("unopt.dot");
 			//Optimization.runPasses(propNet, null, null);
 
 			// add initial state

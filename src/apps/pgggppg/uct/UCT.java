@@ -1,5 +1,6 @@
 package apps.pgggppg.uct;
 
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -61,7 +62,9 @@ public class UCT {
 		}
 
 		
-		System.out.println(">> UCT simulations: " + simulationCount);
+		NumberFormat fmt = NumberFormat.getInstance();
+		fmt.setGroupingUsed(true);
+		System.out.println(">> UCT simulations: " + fmt.format(simulationCount));
 		System.out.println(">> UCT cache size: " + nodes.size());
 		System.out.println(">> retaining " + retainedNodes.size() + " of " + nodes.size() + " nodes");
 		System.out.println(">> optimal action:");

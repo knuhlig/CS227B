@@ -11,8 +11,7 @@ public abstract class Optimization {
 	
 	// CurrentlyTrue and currentlyFalse can be null if we don't know anything
 	public static void runPasses(PropNet propNet, Set<Component> currentlyTrue, Set<Component> currentlyFalse) {
-		propNet.renderToFile("unopt.dot");
-		if (currentlyTrue != null && currentlyFalse != null) {
+		/*if (currentlyTrue != null && currentlyFalse != null) {
 			new LatchSquasher(propNet, currentlyTrue, currentlyFalse).runPass();
 		}
 		new DeadNodeEliminator(propNet).runPass();
@@ -23,9 +22,7 @@ public abstract class Optimization {
 		new EquivalenceMerger(propNet).runPass();
 		new DeadNodeEliminator(propNet).runPass();
 		new PassthroughNodeRemover(propNet).runPass();
-		new DeadNodeEliminator(propNet).runPass();
-		propNet.renderToFile("opt.dot");
-		System.out.println("made it!");
+		new DeadNodeEliminator(propNet).runPass();*/
 	}
 	
 	protected PropNet propnet;
