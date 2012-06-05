@@ -24,8 +24,10 @@ public class UCT {
 	
 	private long timeout;
 	private boolean timedOut;
+	private Move majorBranch;
 	
 	private Map<MachineState, UCTNode> nodes = new HashMap<MachineState, UCTNode>();
+	private Map<Move, Set<MachineState>> branches = new HashMap<Move, Set<MachineState>>();
 	
 	public UCT(StateMachine machine, Role myRole) {
 		this.machine = machine;
@@ -45,9 +47,25 @@ public class UCT {
 		searchRepeatedly(state, timeout);
 		node.printQValues(myPlayerIdx);
 		Move action = node.getOptimalAction(myPlayerIdx);
+		
+		
+		// retain cache nodes along chosen branch
+		Set<MachineState> branchCache = branches.get(action);
+		Map<MachineState, UCTNode> retainedNodes = new HashMap<MachineState, UCTNode>();
+		for (MachineState branchState: branchCache) {
+			if (nodes.containsKey(branchState)) {
+				retainedNodes.put(branchState, nodes.get(branchState));
+			}
+		}
+
+		System.out.println(">> UCT cache size: " + nodes.size());
+		System.out.println(">> retaining " + retainedNodes.size() + " of " + nodes.size() + " nodes");
 		System.out.println(">> optimal action:");
 		System.out.println("        move: " + action);
 		System.out.println("      payoff: " + node.getPayoff(myPlayerIdx, action));
+		
+		this.nodes = retainedNodes;
+		branches.clear();
 		return action;
 	}
 	
@@ -58,6 +76,7 @@ public class UCT {
 		int it = 0;
 		
 		while (!timedOut) {
+			majorBranch = null;
 			search(state, qValues);
 			it++;
 		}
@@ -87,7 +106,19 @@ public class UCT {
 			sampledActions.add(node.sampleAction(i));
 		}
 		
-		search(machine.getNextState(state, sampledActions), qValues);
+		MachineState nextState = machine.getNextState(state, sampledActions);
+		
+		// do some branch caching to avoid running out of memory?
+		if (majorBranch == null) {
+			majorBranch = sampledActions.get(myPlayerIdx);
+			if (!branches.containsKey(majorBranch)) {
+				branches.put(majorBranch, new HashSet<MachineState>());
+			}
+		}
+		branches.get(majorBranch).add(nextState);
+		
+		search(nextState, qValues);
+		
 		if (!timedOut) {
 			for (int i = 0; i < numPlayers; i++) {
 				qValues[i] *= GAMMA;
