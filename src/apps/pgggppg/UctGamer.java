@@ -7,6 +7,7 @@ import util.statemachine.StateMachine;
 import util.statemachine.exceptions.GoalDefinitionException;
 import util.statemachine.exceptions.MoveDefinitionException;
 import util.statemachine.exceptions.TransitionDefinitionException;
+import apps.pgggppg.compilation.NativeMachineState;
 import apps.pgggppg.compilation.NativePropNetStateMachine;
 import apps.pgggppg.uct.UCT;
 
@@ -18,7 +19,7 @@ public class UctGamer extends StateMachineGamer {
 	}
 	
 	private UCT uct;
-	private StateMachine machine;
+	private NativePropNetStateMachine machine;
 	private long timeoutPadding = 1000;
 	
 	@Override

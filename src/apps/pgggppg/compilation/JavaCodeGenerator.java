@@ -214,12 +214,6 @@ public class JavaCodeGenerator {
 	}
 	
 	private void generateSourceFile() throws Exception {
-		/*for (Component c: translation.keySet()) {
-			if (c instanceof Proposition) {
-				int idx = translation.get(c);
-				System.out.println(">> " + idx + " => " + ((Proposition) c).getName());
-			}
-		}*/
 		System.out.println(">> writing source file... " + fileName);
 		out = new BufferedWriter(new FileWriter(fileName));
 		
@@ -420,14 +414,35 @@ public class JavaCodeGenerator {
 	}
 	
 	private void writeTransitionMethod() {
-		writeLine(1, "private MachineState transition() {");
-		writeLine(2, className + " state = new " + className + "();");
+		StringBuilder b = new StringBuilder();
+		int methodNum = 0;
+		
+		writeLine(b,1, "private void transition"+methodNum+ "(" + className+" state) {");
+
 		for (Proposition p: propNet.getBasePropositions().values()) {
 			int idx = translation.get(p);
 			int blockIdx = idx / BLOCK_BITS;
 			int offset = idx % BLOCK_BITS;
 			String maskStr = getBitMask(offset);
-			writeLine(2, "state." + getDataBlock(blockIdx) + " |= "+getBitFunction(p, offset) + " & " + maskStr + ";");
+			String line = "state." + getDataBlock(blockIdx) + " |= "+getBitFunction(p, offset) + " & " + maskStr + ";";
+			
+			int nextLength = b.length() + line.length() + 2;
+			if (nextLength >= methodLengthLimit) {
+				writeLine(b,1,"}");
+				writeLine(0,b.toString());
+				b = new StringBuilder();
+				methodNum++;
+				writeLine(b,1,"private void transition"+methodNum+ "(" + className+" state) {");
+			}
+			writeLine(b, 2, line);
+		}
+		writeLine(b,1,"}");
+		writeLine(0, b.toString());
+		
+		writeLine(1, "private MachineState transition() {");
+		writeLine(2, className + " state = new " + className + "();");
+		for (int i = 0; i <= methodNum; i++) {
+			writeLine(2,"transition"+i+"(state);");
 		}
 		writeLine(2, "state.mark();");
 		writeLine(2, "return state;");

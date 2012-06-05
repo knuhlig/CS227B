@@ -9,8 +9,12 @@ import util.propnet.architecture.components.Proposition;
 
 public abstract class Optimization {
 	
-	public static void runPasses(PropNet propNet) {
-		propNet.renderToFile("/Users/knuhlig/Desktop/unopt.dot");
+	// CurrentlyTrue and currentlyFalse can be null if we don't know anything
+	public static void runPasses(PropNet propNet, Set<Component> currentlyTrue, Set<Component> currentlyFalse) {
+		propNet.renderToFile("unopt.dot");
+		if (currentlyTrue != null && currentlyFalse != null) {
+			new LatchSquasher(propNet, currentlyTrue, currentlyFalse).runPass();
+		}
 		new DeadNodeEliminator(propNet).runPass();
 		new NotSquasher(propNet).runPass();
 		new DeadNodeEliminator(propNet).runPass();
@@ -20,8 +24,7 @@ public abstract class Optimization {
 		new DeadNodeEliminator(propNet).runPass();
 		new PassthroughNodeRemover(propNet).runPass();
 		new DeadNodeEliminator(propNet).runPass();
-		System.out.println("made aaaas!");
-		propNet.renderToFile("/Users/knuhlig/Desktop/opt.dot");
+		propNet.renderToFile("opt.dot");
 		System.out.println("made it!");
 	}
 	

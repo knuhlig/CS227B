@@ -51,6 +51,8 @@ public class NativePropNetStateMachine extends StateMachine {
 	
 	private Map<Integer, Component> translation = new HashMap<Integer, Component>();
 	
+	PropNet propNet;
+	
 	public void addRole(Role role) {
 		int idx = roles.size();
 		roles.add(role);
@@ -114,12 +116,9 @@ public class NativePropNetStateMachine extends StateMachine {
 	public void initialize(List<Gdl> description) {
 		try {
 			reset();
-			PropNet propNet = OptimizingPropNetFactory.create(description);
-			propNet.renderToFile("unopt.dot");
-			Optimization.runPasses(propNet);
-			
-			System.out.println(">> rendering propNet to file");
-			propNet.renderToFile("opt.dot");
+			propNet = OptimizingPropNetFactory.create(description);
+			//propNet.renderToFile("unopt.dot");
+			//Optimization.runPasses(propNet, null, null);
 
 			// add initial state
 			initialState = genCompiledPropnet(propNet);
@@ -128,10 +127,13 @@ public class NativePropNetStateMachine extends StateMachine {
 		}
 	}
 	
-	public void reIntialize(NativeMachineState state) {
+	public MachineState reIntialize(MachineState s) {
+		NativeMachineState state = (NativeMachineState)s;
 		Set<Component> trueComponents = getComponents(state, true);
 		Set<Component> falseComponents = getComponents(state, false);
-		
+		Optimization.runPasses(propNet, trueComponents, falseComponents);
+		reset();
+		return genCompiledPropnet(propNet);
 	}
 
 	public Set<Component> getComponents(MachineState state, boolean bitType) {

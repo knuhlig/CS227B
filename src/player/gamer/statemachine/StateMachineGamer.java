@@ -231,6 +231,10 @@ public abstract class StateMachineGamer extends SingleGameGamer
 	protected void abortCleanup() {
 		stateMachineAbort();
 	}
+	
+	protected void setCurrentState(MachineState state) {
+		this.currentState = state;
+	}
     
     // Internal state about the current state of the state machine.
     private Role role;

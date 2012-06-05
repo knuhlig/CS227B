@@ -36,14 +36,14 @@ public class EquivalenceMerger extends Optimization {
 		for (Component c : c2.getOutputs()) {
 			getEquivalents(c).remove(c);
 			c1.addOutput(c);
-			c.removeInput(c2);
 			c.addInput(c1);
+			
+			c.removeInput(c2);
 		}
+		propnet.removeComponent(c2);
 		for (Component c : c2.getOutputs()) {
 			getEquivalents(c).add(c);
 		}
-		
-		propnet.removeComponent(c2);
 	}
 
 	// Merge the given input components (which should all have the same inputs) returns the merged result
