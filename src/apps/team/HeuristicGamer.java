@@ -18,6 +18,7 @@ import util.statemachine.exceptions.GoalDefinitionException;
 import util.statemachine.exceptions.MoveDefinitionException;
 import util.statemachine.exceptions.TransitionDefinitionException;
 import util.statemachine.implementation.propnet.PropNetStateMachine;
+import util.statemachine.implementation.prover.ProverStateMachine;
 
 public abstract class HeuristicGamer extends StateMachineGamer {
 	
@@ -48,8 +49,8 @@ public abstract class HeuristicGamer extends StateMachineGamer {
 	public StateMachine getInitialStateMachine() {
 		// initialize
 		reset();
-
-		return new NativePropNetStateMachine();
+		return new ProverStateMachine();
+		//return new NativePropNetStateMachine();
 		//return new PropNetStateMachine();
 	}
 	

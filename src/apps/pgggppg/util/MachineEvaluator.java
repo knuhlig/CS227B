@@ -28,7 +28,6 @@ public class MachineEvaluator {
 		StateMachine[] machines = new StateMachine[] {
 			//new ProverStateMachine(),
 			//new PropNetStateMachine(),
-			new NativePropNetStateMachine(),
 			//new Connect4Machine(),
 			//new ProverStateMachine()
 		};
