@@ -8,6 +8,7 @@ import java.util.Set;
 import util.propnet.architecture.Component;
 import util.propnet.architecture.PropNet;
 import util.propnet.architecture.components.And;
+import util.propnet.architecture.components.Constant;
 import util.propnet.architecture.components.Not;
 import util.propnet.architecture.components.Or;
 import util.propnet.architecture.components.Proposition;
@@ -113,6 +114,52 @@ public class LatchSquasher extends Optimization {
 		return latchSccs;
 	}
 	
+	void addConstantComponents(Set<Component> componentsWithValue, boolean value, Map<Pair<Component, Boolean>, Set<Node>> nodesImpliedByComponentMarking, Set<Node> outputNodesToConstantize) {
+		for (Component c : componentsWithValue) {
+			Set<Node> nodesImplicated = nodesImpliedByComponentMarking.get(new Pair<Component, Boolean>(c,value));
+			if (nodesImplicated == null) {
+				continue;
+			}
+			for (Node n : nodesImplicated) {
+				outputNodesToConstantize.add(n);
+				// We now remove all the possible nodes to avoid a potential O(n^2) blowup where each node in the SCC triggers this loop
+				nodesImpliedByComponentMarking.remove(new Pair<Component, Boolean>(n.c,n.b));
+			}
+		}
+	}
+	
+	void constantizeNodes(Set<Node> nodes) {
+		// Ensure that we don't add True or False constants if one already exists
+		// Add them if they don't exist
+		Component trueConstant = null;
+		Component falseConstant = null;
+		for (Component c : propnet.getComponents()) {
+			if (c instanceof Constant) {
+				if (c.getValue()) {
+					trueConstant = c;
+				} else {
+					falseConstant = c;
+				}
+			}
+		}
+		if (trueConstant == null) {
+			trueConstant = new Constant(true);
+			propnet.addComponent(trueConstant);
+		}
+		if (falseConstant == null) {
+			falseConstant = new Constant(false);
+			propnet.addComponent(falseConstant);
+		}
+		
+		for (Node constantNode : nodes) {
+			propnet.removeComponent(constantNode.c);
+			Component constant = (constantNode.b ? trueConstant : falseConstant);
+			for (Component output : constantNode.c.getOutputs()) {
+				constant.addOutput(output);
+				output.addInput(constant);
+			}
+		}
+	}
 	
 	public void runPass() {
 		Set<Set<Node>> implicationSCCs = getImplicationSCCs();
@@ -122,6 +169,10 @@ public class LatchSquasher extends Optimization {
 				nodesImpliedByComponentMarking.put(new Pair<Component, Boolean>(n.c,n.b), s);
 			}
 		}
+		Set<Node> nodesToConstantize = new HashSet<Node>();
+		addConstantComponents(trueComponents, true, nodesImpliedByComponentMarking, nodesToConstantize);
+		addConstantComponents(falseComponents, false, nodesImpliedByComponentMarking, nodesToConstantize);
 		
+		constantizeNodes(nodesToConstantize);
 	}
 }

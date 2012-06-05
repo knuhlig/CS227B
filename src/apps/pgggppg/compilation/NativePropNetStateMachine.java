@@ -42,7 +42,7 @@ public class NativePropNetStateMachine extends StateMachine {
 		return new Role(GdlPool.getProposition(GdlPool.getConstant(roleName)));
 	}
 	
-	private MachineState initialState;
+	private NativeMachineState initialState;
 	private List<Role> roles = new ArrayList<Role>();
 	private Map<Role, Integer> roleToIndex = new HashMap<Role, Integer>();
 	
@@ -76,54 +76,62 @@ public class NativePropNetStateMachine extends StateMachine {
 		translation.clear();
 	}
 	
+	private NativeMachineState genCompiledPropnet(PropNet propNet) {
+		JavaCodeGenerator gen = new JavaCodeGenerator(propNet);
+		gen.generateCode();
+		
+		for (Component c: propNet.getComponents()) {
+			int idx = gen.getNativeIdx(c);
+			if (idx >= 0) {
+				translation.put(idx, c);
+			}
+		}
+		
+		// add role mappings
+		for (Role role: propNet.getRoles()) {
+			addRole(role);
+		}
+		
+		// add input mappings
+		Map<GdlTerm, Proposition> inputs = propNet.getInputPropositions();
+		for (GdlTerm term: inputs.keySet()) {
+			Proposition p = inputs.get(term);
+			addDoes(getRole(p), getMove(p), gen.getNativeIdx(p));
+		}
+		
+		// add legal mappings
+		Map<Role, Set<Proposition>> legalProps = propNet.getLegalPropositions();
+		for (Role role: legalProps.keySet()) {
+			for (Proposition p: legalProps.get(role)) {
+				Move move = getMove(p);
+				addLegal(role, move, gen.getNativeIdx(p));
+			}
+		}
+		return gen.getInitialState();
+	}
+	
 	@Override
 	public void initialize(List<Gdl> description) {
 		try {
 			reset();
 			PropNet propNet = OptimizingPropNetFactory.create(description);
-			propNet.renderToFile("/Users/knuhlig/Desktop/unopt.dot");
+			propNet.renderToFile("unopt.dot");
 			Optimization.runPasses(propNet);
 			
 			System.out.println(">> rendering propNet to file");
-			propNet.renderToFile("/Users/knuhlig/Desktop/opt.dot");
-			
-			//BooleanCodeGenerator gen = new BooleanCodeGenerator(propNet);
-			JavaCodeGenerator gen = new JavaCodeGenerator(propNet);
-			gen.generateCode();
-			
-			for (Component c: propNet.getComponents()) {
-				int idx = gen.getNativeIdx(c);
-				if (idx >= 0) {
-					translation.put(idx, c);
-				}
-			}
-			
-			// add role mappings
-			for (Role role: propNet.getRoles()) {
-				addRole(role);
-			}
-			
-			// add input mappings
-			Map<GdlTerm, Proposition> inputs = propNet.getInputPropositions();
-			for (GdlTerm term: inputs.keySet()) {
-				Proposition p = inputs.get(term);
-				addDoes(getRole(p), getMove(p), gen.getNativeIdx(p));
-			}
-			
-			// add legal mappings
-			Map<Role, Set<Proposition>> legalProps = propNet.getLegalPropositions();
-			for (Role role: legalProps.keySet()) {
-				for (Proposition p: legalProps.get(role)) {
-					Move move = getMove(p);
-					addLegal(role, move, gen.getNativeIdx(p));
-				}
-			}
-			
+			propNet.renderToFile("opt.dot");
+
 			// add initial state
-			initialState = gen.getInitialState();
+			initialState = genCompiledPropnet(propNet);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+	}
+	
+	public void reIntialize(NativeMachineState state) {
+		Set<Component> trueComponents = getComponents(state, true);
+		Set<Component> falseComponents = getComponents(state, false);
+		
 	}
 
 	public Set<Component> getComponents(MachineState state, boolean bitType) {

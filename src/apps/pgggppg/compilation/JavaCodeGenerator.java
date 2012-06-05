@@ -203,10 +203,10 @@ public class JavaCodeGenerator {
 		return translation.get(c);
 	}
 	
-	public MachineState getInitialState() {
+	public NativeMachineState getInitialState() {
 		try {
 			NativeMachineState state = (NativeMachineState) Class.forName(srcPackage + "." + className).newInstance();
-			return state.getInitialState();
+			return (NativeMachineState)state.getInitialState();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -220,7 +220,7 @@ public class JavaCodeGenerator {
 				System.out.println(">> " + idx + " => " + ((Proposition) c).getName());
 			}
 		}*/
-		System.out.println(">> writing source file...");
+		System.out.println(">> writing source file... " + fileName);
 		out = new BufferedWriter(new FileWriter(fileName));
 		
 		// package

@@ -114,6 +114,7 @@ public class BooleanCodeGenerator {
 
 			// compile
 			System.out.println(">> compiling source file...");
+			long compilationStart = System.currentTimeMillis();
 			String[] args = new String[] {
 				"-classpath", "bin",
 				"-d", "bin",
@@ -123,7 +124,8 @@ public class BooleanCodeGenerator {
 			if (res != 0) {
 				throw new RuntimeException("compilation failed with status " + res);
 			}
-			System.out.println(">> compilation complete.");
+			long compilationStop = System.currentTimeMillis();
+			System.out.println(">> compilation complete. " + (compilationStop-compilationStart) + " millis");
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
