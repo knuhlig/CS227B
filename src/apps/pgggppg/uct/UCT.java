@@ -1,6 +1,7 @@
 package apps.pgggppg.uct;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -25,6 +26,7 @@ public class UCT {
 	private long timeout;
 	private boolean timedOut;
 	private Move majorBranch;
+	private int simulationCount;
 	
 	private Map<MachineState, UCTNode> nodes = new HashMap<MachineState, UCTNode>();
 	private Map<Move, Set<MachineState>> branches = new HashMap<Move, Set<MachineState>>();
@@ -58,6 +60,8 @@ public class UCT {
 			}
 		}
 
+		
+		System.out.println(">> UCT simulations: " + simulationCount);
 		System.out.println(">> UCT cache size: " + nodes.size());
 		System.out.println(">> retaining " + retainedNodes.size() + " of " + nodes.size() + " nodes");
 		System.out.println(">> optimal action:");
@@ -73,24 +77,26 @@ public class UCT {
 		timedOut = false;
 		this.timeout = timeout;
 		double[] qValues = new double[numPlayers];
-		int it = 0;
+		Set<MachineState> path = new HashSet<MachineState>();
+		
+		simulationCount = 0;
 		
 		while (!timedOut) {
 			majorBranch = null;
-			search(state, qValues);
-			it++;
+			path.clear();
+			search(state, qValues, path);
+			simulationCount++;
 		}
-		
-		System.out.println(">> UCT simulations: " + it);
 	}
 	
-	private void search(MachineState state, double[] qValues) throws Exception {
+	private void search(MachineState state, double[] qValues, Set<MachineState> path) throws Exception {
 		// check for timeouts
 		if (System.currentTimeMillis() >= timeout) {
 			timedOut = true;
 			return;
 		}
 		
+		path.add(state);
 		UCTNode node = getOrCreateNode(state);
 		
 		// terminal state
@@ -107,7 +113,11 @@ public class UCT {
 		}
 		
 		MachineState nextState = machine.getNextState(state, sampledActions);
-		
+		// cycle in the depth charge
+		if (path.contains(nextState)) {
+			Arrays.fill(qValues, 0);
+			return;
+		}
 		// do some branch caching to avoid running out of memory?
 		if (majorBranch == null) {
 			majorBranch = sampledActions.get(myPlayerIdx);
@@ -117,7 +127,7 @@ public class UCT {
 		}
 		branches.get(majorBranch).add(nextState);
 		
-		search(nextState, qValues);
+		search(nextState, qValues, path);
 		
 		if (!timedOut) {
 			for (int i = 0; i < numPlayers; i++) {
