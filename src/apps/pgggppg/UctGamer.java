@@ -7,6 +7,7 @@ import util.statemachine.StateMachine;
 import util.statemachine.exceptions.GoalDefinitionException;
 import util.statemachine.exceptions.MoveDefinitionException;
 import util.statemachine.exceptions.TransitionDefinitionException;
+import util.statemachine.implementation.prover.ProverStateMachine;
 import apps.pgggppg.compilation.NativeMachineState;
 import apps.pgggppg.compilation.NativePropNetStateMachine;
 import apps.pgggppg.uct.UCT;
@@ -19,12 +20,18 @@ public class UctGamer extends StateMachineGamer {
 	}
 	
 	private UCT uct;
-	private NativePropNetStateMachine machine;
+	private StateMachine machine;
 	private long timeoutPadding = 1700;
 	
 	@Override
 	public StateMachine getInitialStateMachine() {
-		machine = new NativePropNetStateMachine();
+		try {
+			machine = new NativePropNetStateMachine(getMatch().getGame().getRules());
+		} catch (Exception e) {
+			e.printStackTrace();
+			System.out.println(">> falling back on ProverStateMachine!");
+			machine = new ProverStateMachine();
+		}
 		return machine;
 	}
 	

@@ -30,6 +30,7 @@ import util.statemachine.StateMachine;
 import util.statemachine.exceptions.GoalDefinitionException;
 import util.statemachine.exceptions.MoveDefinitionException;
 import util.statemachine.exceptions.TransitionDefinitionException;
+import util.statemachine.implementation.prover.ProverStateMachine;
 
 public class NativePropNetStateMachine extends StateMachine {
 	
@@ -50,8 +51,20 @@ public class NativePropNetStateMachine extends StateMachine {
 	private Map<Integer, Move> indexToLegal = new HashMap<Integer, Move>();
 	
 	private Map<Integer, Component> translation = new HashMap<Integer, Component>();
-	
 	PropNet propNet;
+	
+	public NativePropNetStateMachine(List<Gdl> description) {
+		try {
+			reset();
+			propNet = OptimizingPropNetFactory.create(description);
+			//Optimization.runPasses(propNet, null, null);
+
+			// add initial state
+			initialState = genCompiledPropnet(propNet);
+		} catch (Exception e) {
+			throw new RuntimeException("error generating compiled state machine");
+		}
+	}
 	
 	public void addRole(Role role) {
 		int idx = roles.size();
@@ -114,16 +127,6 @@ public class NativePropNetStateMachine extends StateMachine {
 	
 	@Override
 	public void initialize(List<Gdl> description) {
-		try {
-			reset();
-			propNet = OptimizingPropNetFactory.create(description);
-			//Optimization.runPasses(propNet, null, null);
-
-			// add initial state
-			initialState = genCompiledPropnet(propNet);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
 	}
 	
 	public MachineState reIntialize(MachineState s) {
@@ -183,7 +186,5 @@ public class NativePropNetStateMachine extends StateMachine {
 			moveList.add(doesToIndex.get(i).get(moves.get(i)));
 		}
 		return ((NativeMachineState) state).getNextState(moveList);
-	}
-	
-	
+	}	
 }
