@@ -22,7 +22,7 @@ public class UctGamer extends StateMachineGamer {
 	
 	private UCT uct;
 	private StateMachine machine;
-	private long timeoutPadding = 1000;
+	private long timeoutPadding = 1200;
 	
 	@Override
 	public StateMachine getInitialStateMachine() {
@@ -80,7 +80,7 @@ public class UctGamer extends StateMachineGamer {
 	@Override
 	public void stateMachineStop() {
 		System.out.println("==== GAME OVER ====\n");
-		GdlPool.drainPool();
+		//GdlPool.drainPool();
 	}
 
 	@Override
