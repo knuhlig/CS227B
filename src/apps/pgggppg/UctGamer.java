@@ -1,6 +1,7 @@
 package apps.pgggppg;
 
 import player.gamer.statemachine.StateMachineGamer;
+import util.gdl.grammar.GdlPool;
 import util.statemachine.MachineState;
 import util.statemachine.Move;
 import util.statemachine.StateMachine;
@@ -21,7 +22,7 @@ public class UctGamer extends StateMachineGamer {
 	
 	private UCT uct;
 	private StateMachine machine;
-	private long timeoutPadding = 1700;
+	private long timeoutPadding = 1000;
 	
 	@Override
 	public StateMachine getInitialStateMachine() {
@@ -39,6 +40,7 @@ public class UctGamer extends StateMachineGamer {
 	public void stateMachineMetaGame(long timeout)
 			throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException {
 		try {
+			collectGarbage();
 			System.out.println(">> metagaming");
 			uct = new UCT(machine, getRole());
 			uct.searchRepeatedly(machine.getInitialState(), timeout - timeoutPadding);
@@ -48,11 +50,22 @@ public class UctGamer extends StateMachineGamer {
 			e.printStackTrace();
 		}
 	}
+	
+	private void collectGarbage() {
+		if (true) {
+			System.out.println(">> skipping GC");
+			return;
+		}
+		System.out.print(">> garbage collection...");
+		System.gc();
+		System.out.println("done.");
+	}
 
 	@Override
 	public Move stateMachineSelectMove(long timeout) throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException {
 		MachineState currentState = getCurrentState();
 		try {
+			collectGarbage();
 			Move move = uct.selectBestMove(currentState, timeout - timeoutPadding);
 			System.out.println(">> move chosen. Spare time: " + (timeout - System.currentTimeMillis()));
 			return move;
@@ -65,7 +78,10 @@ public class UctGamer extends StateMachineGamer {
 	}
 
 	@Override
-	public void stateMachineStop() {}
+	public void stateMachineStop() {
+		System.out.println("==== GAME OVER ====\n");
+		GdlPool.drainPool();
+	}
 
 	@Override
 	public void stateMachineAbort() {}

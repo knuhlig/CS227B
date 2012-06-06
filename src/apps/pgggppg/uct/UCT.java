@@ -30,6 +30,7 @@ public class UCT {
 	private int simulationCount;
 	
 	private Map<MachineState, UCTNode> nodes = new HashMap<MachineState, UCTNode>();
+	private Move lastAction = null;
 	private Map<Move, Set<MachineState>> branches = new HashMap<Move, Set<MachineState>>();
 	
 	public UCT(StateMachine machine, Role myRole) {
@@ -46,33 +47,40 @@ public class UCT {
 	}
 	
 	public Move selectBestMove(MachineState state, long timeout) throws Exception {
+		if (lastAction != null) {
+			// retain cache nodes along chosen branch
+			Set<MachineState> branchCache = branches.get(lastAction);
+			Map<MachineState, UCTNode> retainedNodes = new HashMap<MachineState, UCTNode>();
+			for (MachineState branchState: branchCache) {
+				if (nodes.containsKey(branchState)) {
+					retainedNodes.put(branchState, nodes.get(branchState));
+				}
+			}
+			
+			System.out.println(">> retaining " + retainedNodes.size() + " of " + nodes.size() + " nodes for next move");
+			
+			// update node cache
+			this.nodes = retainedNodes;
+			branches.clear();
+			lastAction = null;
+		}
+		
 		UCTNode node = getOrCreateNode(state);
 		searchRepeatedly(state, timeout);
-		node.printQValues(myPlayerIdx);
 		Move action = node.getOptimalAction(myPlayerIdx);
-		
-		
-		// retain cache nodes along chosen branch
-		Set<MachineState> branchCache = branches.get(action);
-		Map<MachineState, UCTNode> retainedNodes = new HashMap<MachineState, UCTNode>();
-		for (MachineState branchState: branchCache) {
-			if (nodes.containsKey(branchState)) {
-				retainedNodes.put(branchState, nodes.get(branchState));
-			}
-		}
 
 		
 		NumberFormat fmt = NumberFormat.getInstance();
 		fmt.setGroupingUsed(true);
+		node.printQValues(myPlayerIdx);
 		System.out.println(">> UCT simulations: " + fmt.format(simulationCount));
 		System.out.println(">> UCT cache size: " + nodes.size());
-		System.out.println(">> retaining " + retainedNodes.size() + " of " + nodes.size() + " nodes");
 		System.out.println(">> optimal action:");
 		System.out.println("        move: " + action);
 		System.out.println("      payoff: " + node.getPayoff(myPlayerIdx, action));
+
+		lastAction = action;
 		
-		this.nodes = retainedNodes;
-		branches.clear();
 		return action;
 	}
 	
